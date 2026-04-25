@@ -1,0 +1,14 @@
+<idea-plugin>
+    <id>com.pync</id>
+    <name>Pync</name>
+    <version>1.0.0</version>
+
+    <vendor>Pync</vendor>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+            id="Pync"
+            anchor="right"
+            factoryClass="com.pync.PyncToolWindowFactory"/>
+    </extensions>
+</idea-plugin>
