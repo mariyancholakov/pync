@@ -1,20 +1,28 @@
 package com.pync
 
+import com.intellij.icons.AllIcons
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationType
+import com.intellij.notification.Notifications
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import kotlinx.serialization.json.*
 import java.awt.*
 import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
-import javax.swing.table.DefaultTableCellRenderer
-import javax.swing.table.DefaultTableModel
-import javax.swing.table.TableCellEditor
-import javax.swing.table.TableCellRenderer
+import javax.swing.border.CompoundBorder
 
 class PyncToolWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
@@ -23,200 +31,326 @@ class PyncToolWindowFactory : ToolWindowFactory {
         var role = ""
         var topicKey = ""
         val secrets = mutableListOf<Pair<String, String>>()
+<<<<<<< Updated upstream
         val revealedRows = mutableSetOf<Int>()
         val envWriter = WriteToEnvAction()
+=======
+>>>>>>> Stashed changes
 
         val rootPanel = JPanel(CardLayout())
 
-        // ========== CONNECTION PANEL ==========
+        // =====================================================================
+        // CONNECTION SCREEN — hero layout
+        // =====================================================================
         val connectPanel = JPanel(GridBagLayout())
-        val gbc = GridBagConstraints().apply {
-            insets = Insets(6, 6, 6, 6)
-            fill = GridBagConstraints.HORIZONTAL
-        }
+        val gbc = GridBagConstraints()
 
-        val statusLabel = JLabel("● Disconnected")
-        statusLabel.foreground = Color.RED
+        val brandPanel = JPanel()
+        brandPanel.layout = BoxLayout(brandPanel, BoxLayout.Y_AXIS)
+        brandPanel.isOpaque = false
+
+        val titleLabel = JBLabel("PYNC")
+        titleLabel.font = titleLabel.font.deriveFont(Font.BOLD, 28f)
+        titleLabel.foreground = Color(0x00, 0xBC, 0xD4)
+        titleLabel.alignmentX = Component.CENTER_ALIGNMENT
+
+        val subtitleLabel = JBLabel("Peer-to-peer encrypted secrets")
+        subtitleLabel.foreground = UIUtil.getLabelDisabledForeground()
+        subtitleLabel.font = subtitleLabel.font.deriveFont(12f)
+        subtitleLabel.alignmentX = Component.CENTER_ALIGNMENT
+
+        val taglineLabel = JBLabel("No cloud. No server. AES-256-GCM encrypted.")
+        taglineLabel.foreground = UIUtil.getLabelDisabledForeground()
+        taglineLabel.font = taglineLabel.font.deriveFont(Font.ITALIC, 10f)
+        taglineLabel.alignmentX = Component.CENTER_ALIGNMENT
+
+        brandPanel.add(Box.createVerticalGlue())
+        brandPanel.add(titleLabel)
+        brandPanel.add(Box.createVerticalStrut(4))
+        brandPanel.add(subtitleLabel)
+        brandPanel.add(Box.createVerticalStrut(2))
+        brandPanel.add(taglineLabel)
+        brandPanel.add(Box.createVerticalStrut(24))
+
+        val statusLabel = JBLabel("Not connected")
+        statusLabel.icon = AllIcons.Nodes.EmptyNode
+        statusLabel.foreground = UIUtil.getLabelDisabledForeground()
+        statusLabel.alignmentX = Component.CENTER_ALIGNMENT
+        brandPanel.add(statusLabel)
+        brandPanel.add(Box.createVerticalStrut(20))
+
+        val buttonsPanel = JPanel(GridLayout(1, 2, 12, 0))
+        buttonsPanel.isOpaque = false
+        buttonsPanel.maximumSize = Dimension(320, 36)
 
         val createBtn = JButton("Create Workspace")
+        createBtn.icon = AllIcons.General.Add
+        createBtn.putClientProperty("JButton.buttonType", "default")
+
         val joinBtn = JButton("Join Workspace")
+        joinBtn.icon = AllIcons.Vcs.Fetch
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2
-        connectPanel.add(statusLabel, gbc)
-        gbc.gridy = 1; gbc.gridwidth = 1
-        connectPanel.add(createBtn, gbc)
-        gbc.gridx = 1
-        connectPanel.add(joinBtn, gbc)
+        buttonsPanel.add(createBtn)
+        buttonsPanel.add(joinBtn)
+        buttonsPanel.alignmentX = Component.CENTER_ALIGNMENT
+        brandPanel.add(buttonsPanel)
+        brandPanel.add(Box.createVerticalGlue())
 
-        // ========== SECRETS PANEL ==========
-        val secretsPanel = JPanel(BorderLayout(0, 4))
-        secretsPanel.border = BorderFactory.createEmptyBorder(6, 6, 6, 6)
+        gbc.fill = GridBagConstraints.BOTH
+        gbc.weightx = 1.0; gbc.weighty = 1.0
+        connectPanel.add(brandPanel, gbc)
 
-        val topBar = JPanel(BorderLayout(8, 0))
-        val syncStatusLabel = JLabel("● Syncing...")
-        syncStatusLabel.foreground = Color(0xED, 0x6C, 0x02)
-        val peerLabel = JLabel("0 peers")
-        val topicBar = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0))
-        val topicDisplay = JLabel("")
-        val copyBtn = JButton("Copy")
-        topicBar.add(topicDisplay)
-        topicBar.add(copyBtn)
+        // =====================================================================
+        // SECRETS SCREEN
+        // =====================================================================
+        val secretsToolPanel = SimpleToolWindowPanel(true, true)
 
-        val topLeft = JPanel()
-        topLeft.layout = BoxLayout(topLeft, BoxLayout.Y_AXIS)
-        topLeft.add(syncStatusLabel)
-        topLeft.add(topicBar)
+        // --- Header bar ---
+        val headerPanel = JPanel(BorderLayout(8, 0))
+        headerPanel.border = JBUI.Borders.empty(6, 10, 6, 10)
 
-        topBar.add(topLeft, BorderLayout.WEST)
-        topBar.add(peerLabel, BorderLayout.EAST)
+        val syncDot = JBLabel()
+        syncDot.icon = AllIcons.Actions.Refresh
+        syncDot.text = "Syncing..."
+        syncDot.font = syncDot.font.deriveFont(Font.BOLD, 11f)
 
-        val tableModel = object : DefaultTableModel(arrayOf("KEY", "VALUE", "ACTIONS"), 0) {
-            override fun isCellEditable(row: Int, column: Int): Boolean = column == 2
-        }
-        val table = JTable(tableModel)
-        table.rowHeight = 32
+        val peerChip = JBLabel("0 peers")
+        peerChip.icon = AllIcons.Actions.GroupBy
+        peerChip.font = peerChip.font.deriveFont(11f)
+        peerChip.foreground = UIUtil.getLabelDisabledForeground()
 
-        table.columnModel.getColumn(0).cellRenderer = DefaultTableCellRenderer()
-
-        table.columnModel.getColumn(1).cellRenderer = object : DefaultTableCellRenderer() {
-            override fun getTableCellRendererComponent(
-                table: JTable, value: Any?, isSelected: Boolean,
-                hasFocus: Boolean, row: Int, column: Int
-            ): Component {
-                val display = if (revealedRows.contains(row)) value?.toString() ?: "" else "••••••••"
-                val comp = super.getTableCellRendererComponent(table, display, isSelected, hasFocus, row, column)
-                border = BorderFactory.createEmptyBorder(0, 4, 0, 4)
-                return comp
-            }
-        }
-
-        table.addMouseListener(object : MouseAdapter() {
+        val topicChip = JBLabel("")
+        topicChip.font = Font(Font.MONOSPACED, Font.PLAIN, 10)
+        topicChip.foreground = UIUtil.getLabelDisabledForeground()
+        topicChip.cursor = Cursor(Cursor.HAND_CURSOR)
+        topicChip.toolTipText = "Click to copy workspace key"
+        topicChip.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                val row = table.rowAtPoint(e.point)
-                val col = table.columnAtPoint(e.point)
-                if (col == 1 && row >= 0) {
-                    if (revealedRows.contains(row)) revealedRows.remove(row) else revealedRows.add(row)
-                    tableModel.fireTableRowsUpdated(row, row)
+                if (topicKey.isNotEmpty()) {
+                    Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(topicKey), null)
+                    Notifications.Bus.notify(
+                        Notification("Pync", "Workspace key copied", NotificationType.INFORMATION), project
+                    )
                 }
             }
         })
 
-        val actionsRenderer = TableCellRenderer { _, _, _, _, _, _ ->
-            val p = JPanel(FlowLayout(FlowLayout.CENTER, 2, 0))
-            p.add(JButton("Edit"))
-            p.add(JButton("Delete"))
-            p
-        }
-        table.columnModel.getColumn(2).cellRenderer = actionsRenderer
+        val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0))
+        leftHeader.isOpaque = false
+        leftHeader.add(syncDot)
+        leftHeader.add(topicChip)
 
-        val actionsEditor = object : AbstractCellEditor(), TableCellEditor {
-            private val panel = JPanel(FlowLayout(FlowLayout.CENTER, 2, 0))
-            private val editBtn = JButton("Edit")
-            private val deleteBtn = JButton("Delete")
-            private var currentRow = -1
+        headerPanel.add(leftHeader, BorderLayout.WEST)
+        headerPanel.add(peerChip, BorderLayout.EAST)
 
-            init {
-                editBtn.addActionListener {
-                    fireEditingStopped()
-                    if (currentRow in secrets.indices) {
-                        val (key, value) = secrets[currentRow]
-                        val dialog = EditSecretDialog(project, key, value)
-                        if (dialog.showAndGet()) {
-                            val (newKey, newValue) = dialog.getResult() ?: return@addActionListener
-                            if (newKey != dialog.originalKey) {
-                                val delCmd = buildJsonObject {
-                                    put("cmd", "delete")
-                                    put("key", dialog.originalKey)
-                                }
-                                sidecarService.sendCommand(delCmd.toString())
-                            }
-                            val cmd = buildJsonObject {
-                                put("cmd", "set")
-                                put("key", newKey)
-                                put("value", newValue)
-                            }
-                            sidecarService.sendCommand(cmd.toString())
-                        }
-                    }
-                }
-                deleteBtn.addActionListener {
-                    fireEditingStopped()
-                    if (currentRow in secrets.indices) {
-                        val key = secrets[currentRow].first
-                        val cmd = buildJsonObject {
-                            put("cmd", "delete")
-                            put("key", key)
-                        }
-                        sidecarService.sendCommand(cmd.toString())
-                    }
-                }
-                panel.add(editBtn)
-                panel.add(deleteBtn)
+        // --- Secrets list ---
+        val listModel = DefaultListModel<Pair<String, String>>()
+        val revealedKeys = mutableSetOf<String>()
+
+        val secretList = JBList(listModel)
+        secretList.selectionMode = ListSelectionModel.SINGLE_SELECTION
+        secretList.emptyText.text = "No secrets yet — click + to add one"
+        secretList.fixedCellHeight = 64
+
+        secretList.cellRenderer = ListCellRenderer<Pair<String, String>> { _, pair, index, isSelected, _ ->
+            val (k, v) = pair
+            val cell = JPanel(BorderLayout(10, 0))
+            cell.border = CompoundBorder(
+                @Suppress("DEPRECATION") JBUI.Borders.customLine(UIUtil.getSeparatorColor(), 0, 0, 1, 0),
+                JBUI.Borders.empty(8, 12, 8, 12)
+            )
+
+            if (isSelected) {
+                cell.background = UIUtil.getListSelectionBackground(true)
+            } else {
+                cell.background = if (index % 2 == 0) UIUtil.getListBackground() else UIUtil.getDecoratedRowColor()
             }
 
-            override fun getTableCellEditorComponent(
-                table: JTable, value: Any?, isSelected: Boolean, row: Int, column: Int
-            ): Component {
-                currentRow = row
-                editBtn.isVisible = true
-                deleteBtn.isVisible = true
-                return panel
+            val leftSide = JPanel(BorderLayout(6, 0))
+            leftSide.isOpaque = false
+
+            val iconLabel = JBLabel(AllIcons.Nodes.SecurityRole)
+            leftSide.add(iconLabel, BorderLayout.WEST)
+
+            val textPanel = JPanel()
+            textPanel.layout = BoxLayout(textPanel, BoxLayout.Y_AXIS)
+            textPanel.isOpaque = false
+
+            val keyLbl = JBLabel(k)
+            keyLbl.font = keyLbl.font.deriveFont(Font.BOLD, 13f)
+            if (isSelected) keyLbl.foreground = UIUtil.getListSelectionForeground(true)
+            textPanel.add(keyLbl)
+
+            val dots = minOf(v.length, 20).coerceAtLeast(8)
+            val displayValue = if (revealedKeys.contains(k)) v else "•".repeat(dots)
+            val valLbl = JBLabel(displayValue)
+            valLbl.font = Font(Font.MONOSPACED, Font.PLAIN, 11)
+            valLbl.foreground = if (isSelected) {
+                val fg = UIUtil.getListSelectionForeground(true)
+                Color(fg.red, fg.green, fg.blue, 180)
+            } else {
+                Color(0x00, 0xBC, 0xD4)
             }
+            textPanel.add(valLbl)
 
-            override fun getCellEditorValue(): Any = ""
+            leftSide.add(textPanel, BorderLayout.CENTER)
+            cell.add(leftSide, BorderLayout.CENTER)
+
+            val lockLabel = JBLabel(
+                if (revealedKeys.contains(k)) AllIcons.Actions.ToggleVisibility else AllIcons.Ide.HectorOn
+            )
+            lockLabel.toolTipText = if (revealedKeys.contains(k)) "Click to hide" else "Click to reveal"
+            cell.add(lockLabel, BorderLayout.EAST)
+
+            cell
         }
-        table.columnModel.getColumn(2).cellEditor = actionsEditor
 
-        val bottomPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
-        val addSecretBtn = JButton("Add Secret")
-        val deleteSecretBtn = JButton("Delete Secret")
-        val leaveBtn = JButton("Leave")
-        addSecretBtn.isVisible = true
-        deleteSecretBtn.isEnabled = false
-        bottomPanel.add(addSecretBtn)
-        bottomPanel.add(deleteSecretBtn)
-        bottomPanel.add(leaveBtn)
+        secretList.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                val idx = secretList.locationToIndex(e.point)
+                if (idx < 0) return
+                val cellBounds = secretList.getCellBounds(idx, idx) ?: return
+                val relativeX = e.x - cellBounds.x
+                if (relativeX > cellBounds.width - 40) {
+                    val key = listModel.getElementAt(idx).first
+                    if (revealedKeys.contains(key)) revealedKeys.remove(key) else revealedKeys.add(key)
+                    secretList.repaint()
+                }
+            }
+        })
 
-        secretsPanel.add(topBar, BorderLayout.NORTH)
-        secretsPanel.add(JScrollPane(table), BorderLayout.CENTER)
-        secretsPanel.add(bottomPanel, BorderLayout.SOUTH)
+        val scrollPane = JBScrollPane(secretList)
 
-        // ========== CARD LAYOUT ==========
+        // --- Toolbar ---
+        val actionGroup = DefaultActionGroup()
+
+        actionGroup.add(object : AnAction("Add Secret", "Add a new secret", AllIcons.General.Add) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val dialog = AddSecretDialog(project)
+                if (dialog.showAndGet()) {
+                    val (key, value) = dialog.getResult() ?: return
+                    sidecarService.sendCommand(buildJsonObject {
+                        put("cmd", "set"); put("key", key); put("value", value)
+                    }.toString())
+                }
+            }
+        })
+
+        actionGroup.add(object : AnAction("Edit Secret", "Edit the selected secret", AllIcons.Actions.Edit) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val sel = secretList.selectedValue ?: return
+                val dialog = EditSecretDialog(project, sel.first, sel.second)
+                if (dialog.showAndGet()) {
+                    val (newKey, newValue) = dialog.getResult() ?: return
+                    if (newKey != dialog.originalKey) {
+                        sidecarService.sendCommand(buildJsonObject {
+                            put("cmd", "delete"); put("key", dialog.originalKey)
+                        }.toString())
+                    }
+                    sidecarService.sendCommand(buildJsonObject {
+                        put("cmd", "set"); put("key", newKey); put("value", newValue)
+                    }.toString())
+                }
+            }
+            override fun update(e: AnActionEvent) { e.presentation.isEnabled = secretList.selectedValue != null }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+
+        actionGroup.add(object : AnAction("Delete Secret", "Delete the selected secret", AllIcons.General.Remove) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val sel = secretList.selectedValue ?: return
+                sidecarService.sendCommand(buildJsonObject {
+                    put("cmd", "delete"); put("key", sel.first)
+                }.toString())
+            }
+            override fun update(e: AnActionEvent) { e.presentation.isEnabled = secretList.selectedValue != null }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+
+        actionGroup.addSeparator()
+
+        actionGroup.add(object : AnAction("Copy Value", "Copy the selected secret value", AllIcons.Actions.Copy) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val sel = secretList.selectedValue ?: return
+                Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(sel.second), null)
+                Notifications.Bus.notify(
+                    Notification("Pync", "Copied ${sel.first}", NotificationType.INFORMATION), project
+                )
+            }
+            override fun update(e: AnActionEvent) { e.presentation.isEnabled = secretList.selectedValue != null }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+
+        actionGroup.add(object : AnAction("Export .env", "Export all secrets to .env file", AllIcons.Actions.Download) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val all = (0 until listModel.size()).map { listModel.getElementAt(it) }
+                if (all.isNotEmpty()) ExportAction().export(all, project.basePath ?: ".", project)
+            }
+            override fun update(e: AnActionEvent) { e.presentation.isEnabled = listModel.size() > 0 }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+
+        actionGroup.addSeparator()
+
+        actionGroup.add(object : AnAction("Leave Workspace", "Disconnect and clear local data", AllIcons.Actions.Exit) {
+            override fun actionPerformed(e: AnActionEvent) {
+                sidecarService.destroy()
+                val dataDir = java.io.File(project.basePath ?: ".", "data")
+                if (dataDir.exists()) dataDir.deleteRecursively()
+                secrets.clear()
+                listModel.clear()
+                revealedKeys.clear()
+                role = ""
+                topicKey = ""
+                SwingUtilities.invokeLater {
+                    statusLabel.text = "Not connected"
+                    statusLabel.icon = AllIcons.Nodes.EmptyNode
+                    statusLabel.foreground = UIUtil.getLabelDisabledForeground()
+                    (rootPanel.layout as CardLayout).show(rootPanel, "connect")
+                }
+            }
+        })
+
+        val toolbar = ActionManager.getInstance().createActionToolbar("PyncToolbar", actionGroup, true)
+        toolbar.targetComponent = secretsToolPanel
+
+        val topSection = JPanel(BorderLayout())
+        topSection.add(headerPanel, BorderLayout.NORTH)
+        topSection.add(toolbar.component, BorderLayout.SOUTH)
+
+        secretsToolPanel.setContent(scrollPane)
+        secretsToolPanel.setToolbar(topSection)
+
+        // =====================================================================
+        // CARD LAYOUT
+        // =====================================================================
         rootPanel.add(connectPanel, "connect")
-        rootPanel.add(secretsPanel, "secrets")
+        rootPanel.add(secretsToolPanel, "secrets")
         (rootPanel.layout as CardLayout).show(rootPanel, "connect")
 
-        // ========== HELPERS ==========
-        fun refreshTable(newSecrets: List<Pair<String, String>>) {
+        fun refreshList(newSecrets: List<Pair<String, String>>) {
             secrets.clear()
             secrets.addAll(newSecrets)
-            revealedRows.clear()
-            tableModel.setRowCount(0)
-            for ((key, value) in secrets) {
-                tableModel.addRow(arrayOf(key, value, ""))
-            }
+            listModel.clear()
+            for (s in newSecrets) listModel.addElement(s)
         }
 
-        fun showSecretsPanel() {
-            (rootPanel.layout as CardLayout).show(rootPanel, "secrets")
-        }
-
-        // ========== BUTTON ACTIONS ==========
+        // =====================================================================
+        // BUTTON ACTIONS
+        // =====================================================================
         createBtn.addActionListener {
             val dialog = CreateWorkspaceDialog(project)
             if (dialog.showAndGet()) {
                 val (workspace, passphrase) = dialog.getResult() ?: return@addActionListener
                 sidecarService.start(project.basePath)
                 SwingUtilities.invokeLater {
-                    statusLabel.text = "● Syncing..."
-                    statusLabel.foreground = Color(0xED, 0x6C, 0x02)
+                    statusLabel.text = "Connecting..."
+                    statusLabel.icon = AllIcons.Actions.Refresh
+                    statusLabel.foreground = Color(0xFF, 0x98, 0x00)
                 }
-                val cmd = buildJsonObject {
-                    put("cmd", "create")
-                    put("workspace", workspace)
-                    put("passphrase", passphrase)
-                }
-                sidecarService.sendCommand(cmd.toString())
+                sidecarService.sendCommand(buildJsonObject {
+                    put("cmd", "create"); put("workspace", workspace); put("passphrase", passphrase)
+                }.toString())
             }
         }
 
@@ -226,18 +360,17 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 val (tk, passphrase) = dialog.getResult() ?: return@addActionListener
                 sidecarService.start(project.basePath)
                 SwingUtilities.invokeLater {
-                    statusLabel.text = "● Syncing..."
-                    statusLabel.foreground = Color(0xED, 0x6C, 0x02)
+                    statusLabel.text = "Connecting..."
+                    statusLabel.icon = AllIcons.Actions.Refresh
+                    statusLabel.foreground = Color(0xFF, 0x98, 0x00)
                 }
-                val cmd = buildJsonObject {
-                    put("cmd", "join")
-                    put("topicKey", tk)
-                    put("passphrase", passphrase)
-                }
-                sidecarService.sendCommand(cmd.toString())
+                sidecarService.sendCommand(buildJsonObject {
+                    put("cmd", "join"); put("topicKey", tk); put("passphrase", passphrase)
+                }.toString())
             }
         }
 
+<<<<<<< Updated upstream
         copyBtn.addActionListener {
             val sel = StringSelection(topicKey)
             Toolkit.getDefaultToolkit().systemClipboard.setContents(sel, null)
@@ -289,6 +422,11 @@ class PyncToolWindowFactory : ToolWindowFactory {
         }
 
         // ========== SIDECAR LISTENER ==========
+=======
+        // =====================================================================
+        // SIDECAR LISTENER
+        // =====================================================================
+>>>>>>> Stashed changes
         sidecarService.addListener { json ->
             val type = json["type"]?.jsonPrimitive?.content ?: return@addListener
 
@@ -297,11 +435,12 @@ class PyncToolWindowFactory : ToolWindowFactory {
                     role = json["role"]?.jsonPrimitive?.content ?: ""
                     topicKey = json["topicKey"]?.jsonPrimitive?.content ?: ""
                     SwingUtilities.invokeLater {
-                        syncStatusLabel.text = "● Syncing..."
-                        syncStatusLabel.foreground = Color(0xED, 0x6C, 0x02)
-                        topicDisplay.text = "Topic: ${topicKey.take(16)}..."
-                        addSecretBtn.isVisible = true
-                        showSecretsPanel()
+                        syncDot.icon = AllIcons.Actions.Refresh
+                        syncDot.text = "Syncing..."
+                        syncDot.foreground = Color(0xFF, 0x98, 0x00)
+                        topicChip.text = topicKey.take(12) + "..."
+                        topicChip.toolTipText = "Key: $topicKey  (click to copy)"
+                        (rootPanel.layout as CardLayout).show(rootPanel, "secrets")
                     }
                 }
 
@@ -314,27 +453,37 @@ class PyncToolWindowFactory : ToolWindowFactory {
                         k to v
                     }
                     SwingUtilities.invokeLater {
+<<<<<<< Updated upstream
                         syncStatusLabel.text = "● Synced"
                         syncStatusLabel.foreground = Color(0x2E, 0x7D, 0x32)
                         refreshTable(parsed)
                         envWriter.autoSync(project, parsed)
+=======
+                        syncDot.icon = AllIcons.General.InspectionsOK
+                        syncDot.text = "Synced"
+                        syncDot.foreground = Color(0x4C, 0xAF, 0x50)
+                        refreshList(parsed)
+>>>>>>> Stashed changes
                     }
                 }
 
                 "peers" -> {
                     val count = json["count"]?.jsonPrimitive?.int ?: 0
                     SwingUtilities.invokeLater {
-                        peerLabel.text = "$count peer${if (count != 1) "s" else ""}"
+                        peerChip.text = "$count peer${if (count != 1) "s" else ""}"
+                        peerChip.icon = if (count > 0) AllIcons.Actions.GroupBy else AllIcons.General.Warning
                     }
                 }
 
                 "error" -> {
                     val message = json["message"]?.jsonPrimitive?.content ?: "Unknown error"
                     SwingUtilities.invokeLater {
-                        statusLabel.text = "● Error: $message"
-                        statusLabel.foreground = Color.RED
-                        syncStatusLabel.text = "● Error: $message"
-                        syncStatusLabel.foreground = Color.RED
+                        syncDot.icon = AllIcons.General.Error
+                        syncDot.text = message
+                        syncDot.foreground = Color(0xF4, 0x43, 0x36)
+                        statusLabel.text = "Error: $message"
+                        statusLabel.icon = AllIcons.General.Error
+                        statusLabel.foreground = Color(0xF4, 0x43, 0x36)
                     }
                 }
             }

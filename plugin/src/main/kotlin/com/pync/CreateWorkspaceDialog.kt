@@ -2,11 +2,12 @@ package com.pync
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 class CreateWorkspaceDialog(project: Project?) : DialogWrapper(project) {
 
@@ -17,6 +18,25 @@ class CreateWorkspaceDialog(project: Project?) : DialogWrapper(project) {
     init {
         title = "Create Workspace"
         init()
+        val listener = object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) = updateValidation()
+            override fun removeUpdate(e: DocumentEvent) = updateValidation()
+            override fun changedUpdate(e: DocumentEvent) = updateValidation()
+        }
+        workspaceField.document.addDocumentListener(listener)
+        passphraseField.document.addDocumentListener(listener)
+        updateValidation()
+    }
+
+    private fun updateValidation() {
+        val nameEmpty = workspaceField.text.isNullOrBlank()
+        val passEmpty = passphraseField.text.isNullOrBlank()
+        when {
+            nameEmpty -> setErrorText("Workspace name required")
+            passEmpty -> setErrorText("Passphrase required")
+            else -> setErrorText(null)
+        }
+        isOKActionEnabled = !nameEmpty && !passEmpty
     }
 
     override fun createCenterPanel(): JComponent {
@@ -24,12 +44,6 @@ class CreateWorkspaceDialog(project: Project?) : DialogWrapper(project) {
             row("Workspace name:") { cell(workspaceField).focused().columns(30) }
             row("Passphrase:") { cell(passphraseField).columns(30) }
         }
-    }
-
-    override fun doValidate(): ValidationInfo? {
-        if (workspaceField.text.isBlank()) return ValidationInfo("Workspace name required", workspaceField)
-        if (passphraseField.text.isBlank()) return ValidationInfo("Passphrase required", passphraseField)
-        return null
     }
 
     override fun doOKAction() {
