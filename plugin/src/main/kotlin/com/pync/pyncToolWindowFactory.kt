@@ -82,7 +82,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 table: JTable, value: Any?, isSelected: Boolean,
                 hasFocus: Boolean, row: Int, column: Int
             ): Component {
-                val display = if (revealedRows.contains(row)) value?.toString() ?: "" else "••••••"
+                val display = if (revealedRows.contains(row)) value?.toString() ?: "" else "••••••••"
                 val comp = super.getTableCellRendererComponent(table, display, isSelected, hasFocus, row, column)
                 border = BorderFactory.createEmptyBorder(0, 4, 0, 4)
                 return comp
@@ -121,10 +121,17 @@ class PyncToolWindowFactory : ToolWindowFactory {
                         val (key, value) = secrets[currentRow]
                         val dialog = EditSecretDialog(project, key, value)
                         if (dialog.showAndGet()) {
-                            val newValue = dialog.getResult() ?: return@addActionListener
+                            val (newKey, newValue) = dialog.getResult() ?: return@addActionListener
+                            if (newKey != dialog.originalKey) {
+                                val delCmd = buildJsonObject {
+                                    put("cmd", "delete")
+                                    put("key", dialog.originalKey)
+                                }
+                                sidecarService.sendCommand(delCmd.toString())
+                            }
                             val cmd = buildJsonObject {
                                 put("cmd", "set")
-                                put("key", key)
+                                put("key", newKey)
                                 put("value", newValue)
                             }
                             sidecarService.sendCommand(cmd.toString())
@@ -161,11 +168,12 @@ class PyncToolWindowFactory : ToolWindowFactory {
 
         val bottomPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
         val addSecretBtn = JButton("Add Secret")
-        val exportBtn = JButton("Export .env")
+        val deleteSecretBtn = JButton("Delete Secret")
         val leaveBtn = JButton("Leave")
         addSecretBtn.isVisible = true
+        deleteSecretBtn.isEnabled = false
         bottomPanel.add(addSecretBtn)
-        bottomPanel.add(exportBtn)
+        bottomPanel.add(deleteSecretBtn)
         bottomPanel.add(leaveBtn)
 
         secretsPanel.add(topBar, BorderLayout.NORTH)
@@ -234,6 +242,22 @@ class PyncToolWindowFactory : ToolWindowFactory {
             Toolkit.getDefaultToolkit().systemClipboard.setContents(sel, null)
         }
 
+        table.selectionModel.addListSelectionListener {
+            deleteSecretBtn.isEnabled = table.selectedRow >= 0
+        }
+
+        deleteSecretBtn.addActionListener {
+            val row = table.selectedRow
+            if (row >= 0 && row < secrets.size) {
+                val key = secrets[row].first
+                val cmd = buildJsonObject {
+                    put("cmd", "delete")
+                    put("key", key)
+                }
+                sidecarService.sendCommand(cmd.toString())
+            }
+        }
+
         addSecretBtn.addActionListener {
             val dialog = AddSecretDialog(project)
             if (dialog.showAndGet()) {
@@ -247,13 +271,10 @@ class PyncToolWindowFactory : ToolWindowFactory {
             }
         }
 
-        exportBtn.addActionListener {
-            val basePath = project.basePath ?: return@addActionListener
-            ExportAction().export(secrets.toList(), basePath, project)
-        }
-
         leaveBtn.addActionListener {
             sidecarService.destroy()
+            val dataDir = java.io.File(project.basePath ?: ".", "data")
+            if (dataDir.exists()) dataDir.deleteRecursively()
             secrets.clear()
             tableModel.setRowCount(0)
             role = ""

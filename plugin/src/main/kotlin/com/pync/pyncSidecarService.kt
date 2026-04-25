@@ -54,6 +54,7 @@ class PyncSidecarService : Disposable {
                 ).first { it.isNotEmpty() && (Path.of(it).toFile().exists() || it == "node") }
                 val pb = ProcessBuilder(nodePath, sidecarPath)
                     .redirectErrorStream(false)
+                pb.directory(java.io.File(projectPath ?: System.getProperty("user.dir")))
                 pb.environment()["PATH"] = System.getenv("PATH") ?: "/usr/local/bin:/usr/bin:/bin"
                 val proc = pb.start()
                 process = proc
