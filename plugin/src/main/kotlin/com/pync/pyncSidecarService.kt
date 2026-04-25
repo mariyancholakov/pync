@@ -1,5 +1,6 @@
 package com.pync
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
@@ -10,65 +11,74 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
 
 @Service(Service.Level.APP)
-class PyncSidecarService {
-
-    val SIDECAR_PATH: String = System.getProperty("user.dir") + "/../sidecar/index.js"
+class PyncSidecarService : Disposable {
 
     private var process: Process? = null
     private var writer: BufferedWriter? = null
-    private val listeners = mutableListOf<(JsonObject) -> Unit>()
+    private val listeners = CopyOnWriteArrayList<(JsonObject) -> Unit>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    private fun resolveSidecarPath(): String {
+        val pluginDir = Path.of(javaClass.protectionDomain.codeSource.location.toURI()).parent
+        val candidate = pluginDir.resolve("../../sidecar/index.js").normalize()
+        if (candidate.toFile().exists()) return candidate.toString()
+
+        val cwdCandidate = Path.of(System.getProperty("user.dir"), "sidecar", "index.js")
+        if (cwdCandidate.toFile().exists()) return cwdCandidate.toString()
+
+        return Path.of(System.getProperty("user.dir"), "..", "sidecar", "index.js").normalize().toString()
+    }
+
     fun start() {
-        try {
-            process = ProcessBuilder("node", SIDECAR_PATH)
-                .redirectErrorStream(true)
-                .start()
+        scope.launch {
+            try {
+                val sidecarPath = resolveSidecarPath()
+                val proc = ProcessBuilder("node", sidecarPath)
+                    .redirectErrorStream(false)
+                    .start()
+                process = proc
+                writer = BufferedWriter(OutputStreamWriter(proc.outputStream))
 
-            writer = BufferedWriter(OutputStreamWriter(process!!.outputStream))
-
-            scope.launch {
-                try {
-                    val reader = BufferedReader(InputStreamReader(process!!.inputStream))
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        try {
-                            val json = Json.decodeFromString<JsonObject>(line!!)
-                            notifyListeners(json)
-                        } catch (_: Exception) {
-                        }
+                val reader = BufferedReader(InputStreamReader(proc.inputStream))
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    try {
+                        val json = Json.decodeFromString<JsonObject>(line!!)
+                        notifyListeners(json)
+                    } catch (_: Exception) {
                     }
-                } catch (_: Exception) {
                 }
-                notifyListeners(buildJsonObject {
-                    put("type", "error")
-                    put("message", "Sidecar process died")
-                })
+            } catch (_: Exception) {
             }
-        } catch (_: Exception) {
+            notifyListeners(buildJsonObject {
+                put("type", "error")
+                put("message", "Sidecar process exited")
+            })
         }
     }
 
     fun sendCommand(json: String) {
-        try {
-            writer?.write(json + "\n")
-            writer?.flush()
-        } catch (_: Exception) {
+        scope.launch {
+            try {
+                writer?.let {
+                    it.write(json + "\n")
+                    it.flush()
+                }
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun addListener(cb: (JsonObject) -> Unit) {
-        synchronized(listeners) {
-            listeners.add(cb)
-        }
+        listeners.add(cb)
     }
 
     fun removeListener(cb: (JsonObject) -> Unit) {
-        synchronized(listeners) {
-            listeners.remove(cb)
-        }
+        listeners.remove(cb)
     }
 
     fun isRunning(): Boolean {
@@ -79,10 +89,14 @@ class PyncSidecarService {
         }
     }
 
+    override fun dispose() {
+        destroy()
+    }
+
     fun destroy() {
         try {
             scope.cancel()
-            process?.destroy()
+            process?.destroyForcibly()
             process = null
             writer = null
         } catch (_: Exception) {
@@ -90,11 +104,7 @@ class PyncSidecarService {
     }
 
     private fun notifyListeners(json: JsonObject) {
-        val snapshot: List<(JsonObject) -> Unit>
-        synchronized(listeners) {
-            snapshot = listeners.toList()
-        }
-        for (listener in snapshot) {
+        for (listener in listeners) {
             try {
                 listener(json)
             } catch (_: Exception) {

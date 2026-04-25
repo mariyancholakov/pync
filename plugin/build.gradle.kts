@@ -24,23 +24,16 @@ dependencies {
 }
 
 tasks.withType<JavaCompile>().configureEach {
+    sourceCompatibility = "21"
+    targetCompatibility = "21"
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
     compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
 }
 
-sourceSets {
-    main {
-        kotlin {
-            exclude("com/pync/intellij/**")
-        }
-    }
-    test {
-        kotlin {
-            exclude("**")
-        }
-    }
+kotlin {
+    jvmToolchain(21)
 }
 
 intellijPlatform {
@@ -51,7 +44,4 @@ intellijPlatform {
         }
     }
     buildSearchableOptions = false
-}
-kotlin {
-    jvmToolchain(8)
 }
