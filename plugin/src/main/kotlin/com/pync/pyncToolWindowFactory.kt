@@ -162,9 +162,11 @@ class PyncToolWindowFactory : ToolWindowFactory {
         val bottomPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
         val addSecretBtn = JButton("Add Secret")
         val exportBtn = JButton("Export .env")
+        val leaveBtn = JButton("Leave")
         addSecretBtn.isVisible = true
         bottomPanel.add(addSecretBtn)
         bottomPanel.add(exportBtn)
+        bottomPanel.add(leaveBtn)
 
         secretsPanel.add(topBar, BorderLayout.NORTH)
         secretsPanel.add(JScrollPane(table), BorderLayout.CENTER)
@@ -195,7 +197,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
             val dialog = CreateWorkspaceDialog(project)
             if (dialog.showAndGet()) {
                 val (workspace, passphrase) = dialog.getResult() ?: return@addActionListener
-                sidecarService.start()
+                sidecarService.start(project.basePath)
                 SwingUtilities.invokeLater {
                     statusLabel.text = "● Syncing..."
                     statusLabel.foreground = Color(0xED, 0x6C, 0x02)
@@ -213,7 +215,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
             val dialog = JoinWorkspaceDialog(project)
             if (dialog.showAndGet()) {
                 val (tk, passphrase) = dialog.getResult() ?: return@addActionListener
-                sidecarService.start()
+                sidecarService.start(project.basePath)
                 SwingUtilities.invokeLater {
                     statusLabel.text = "● Syncing..."
                     statusLabel.foreground = Color(0xED, 0x6C, 0x02)
@@ -248,6 +250,19 @@ class PyncToolWindowFactory : ToolWindowFactory {
         exportBtn.addActionListener {
             val basePath = project.basePath ?: return@addActionListener
             ExportAction().export(secrets.toList(), basePath, project)
+        }
+
+        leaveBtn.addActionListener {
+            sidecarService.destroy()
+            secrets.clear()
+            tableModel.setRowCount(0)
+            role = ""
+            topicKey = ""
+            SwingUtilities.invokeLater {
+                statusLabel.text = "● Disconnected"
+                statusLabel.foreground = Color.RED
+                (rootPanel.layout as CardLayout).show(rootPanel, "connect")
+            }
         }
 
         // ========== SIDECAR LISTENER ==========

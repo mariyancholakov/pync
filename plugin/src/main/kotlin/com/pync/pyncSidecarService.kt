@@ -21,8 +21,14 @@ class PyncSidecarService : Disposable {
     private var writer: BufferedWriter? = null
     private val listeners = CopyOnWriteArrayList<(JsonObject) -> Unit>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val ready = CompletableDeferred<Unit>()
 
-    private fun resolveSidecarPath(): String {
+    private fun resolveSidecarPath(projectPath: String?): String {
+        if (projectPath != null) {
+            val projectCandidate = Path.of(projectPath, "sidecar", "index.js")
+            if (projectCandidate.toFile().exists()) return projectCandidate.toString()
+        }
+
         val pluginDir = Path.of(javaClass.protectionDomain.codeSource.location.toURI()).parent
         val candidate = pluginDir.resolve("../../sidecar/index.js").normalize()
         if (candidate.toFile().exists()) return candidate.toString()
@@ -33,15 +39,20 @@ class PyncSidecarService : Disposable {
         return Path.of(System.getProperty("user.dir"), "..", "sidecar", "index.js").normalize().toString()
     }
 
-    fun start() {
+    fun start(projectPath: String? = null) {
+        if (process?.isAlive == true) return
         scope.launch {
             try {
-                val sidecarPath = resolveSidecarPath()
-                val proc = ProcessBuilder("node", sidecarPath)
+                val sidecarPath = resolveSidecarPath(projectPath)
+                val nodePath = listOf("/usr/local/bin/node", "/opt/homebrew/bin/node", "node")
+                    .first { Path.of(it).toFile().exists() || it == "node" }
+                val pb = ProcessBuilder(nodePath, sidecarPath)
                     .redirectErrorStream(false)
-                    .start()
+                pb.environment()["PATH"] = System.getenv("PATH") ?: "/usr/local/bin:/usr/bin:/bin"
+                val proc = pb.start()
                 process = proc
                 writer = BufferedWriter(OutputStreamWriter(proc.outputStream))
+                ready.complete(Unit)
 
                 val reader = BufferedReader(InputStreamReader(proc.inputStream))
                 var line: String?
@@ -64,6 +75,7 @@ class PyncSidecarService : Disposable {
     fun sendCommand(json: String) {
         scope.launch {
             try {
+                ready.await()
                 writer?.let {
                     it.write(json + "\n")
                     it.flush()
