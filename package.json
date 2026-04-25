@@ -2,5 +2,17 @@
   "name": "pync",
   "version": "1.0.0",
   "description": "P2P encrypted environment variable sync built on the Pear/Holepunch protocol",
-  "main": "core/index.js"
+  "main": "core/index.js",
+  "dependencies": {
+    "autobase": "^7.27.3",
+    "b4a": "^1.8.0",
+    "boxen": "^5.1.2",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3",
+    "corestore": "^7.9.2",
+    "hyperbee": "^2.27.3",
+    "hyperswarm": "^4.17.0",
+    "rocksdb-native": "^3.15.0",
+    "sodium-native": "^5.1.0"
+  }
 }
