@@ -92,7 +92,7 @@ function assert (condition, msg) {
     // test 1: create workspace
     process.stderr.write('\n=== TEST 1: create workspace ===\n')
     sidecarA = spawnSidecar('A', tmpA, bootstrap)
-    send(sidecarA, { cmd: 'create', room: 'integration-test', passphrase: 'testpass123' })
+    send(sidecarA, { cmd: 'create', workspace: 'integration-test', passphrase: 'testpass123' })
 
     const readyA = await waitForEvent(
       sidecarA,

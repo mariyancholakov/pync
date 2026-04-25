@@ -17,11 +17,11 @@ async function handleCommand(cmd) {
   try {
     switch (cmd.cmd) {
       case 'create': {
-        if (!cmd.room || !cmd.passphrase) {
-          emit({ type: 'error', message: 'Missing room or passphrase' })
+        if (!cmd.workspace || !cmd.passphrase) {
+          emit({ type: 'error', message: 'Missing workspace or passphrase' })
           return
         }
-        const result = await core.createWorkspace(cmd.room, cmd.passphrase)
+        const result = await core.createWorkspace(cmd.workspace, cmd.passphrase)
         state.setReady('manager', result.topicKey)
         emit({ type: 'ready', topicKey: result.topicKey, role: 'manager' })
         break

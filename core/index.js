@@ -40,7 +40,7 @@ class PyncCore {
     }
   }
 
-  async createWorkspace (room, passphrase) {
+  async createWorkspace (workspace, passphrase) {
     this.role = 'creator'
     this.store = new Corestore(this._dataDir)
 
@@ -172,7 +172,7 @@ if (require.main === module) {
 
     try {
       const core = new PyncCore({ dataDir: testDir })
-      const { topicKey } = await core.createWorkspace('testroom', 'testpass')
+      const { topicKey } = await core.createWorkspace('testworkspace', 'testpass')
 
       if (!topicKey || topicKey.length !== 64) throw new Error('bad topicKey')
       if (core.role !== 'creator') throw new Error('role should be creator')

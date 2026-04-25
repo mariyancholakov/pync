@@ -64,18 +64,18 @@ if (process.argv.includes('run')) {
   program.name('pync').description('P2P encrypted environment variable sync').version('1.0.0')
 
   program
-    .command('create <room> <passphrase>')
+    .command('create <workspace> <passphrase>')
     .description('Create a new workspace')
-    .action(async (room, passphrase) => {
+    .action(async (workspace, passphrase) => {
       try {
         const core = new PyncCore()
-        const { topicKey } = await core.createWorkspace(room, passphrase)
+        const { topicKey } = await core.createWorkspace(workspace, passphrase)
 
         saveConfig({ topicKey, passphrase, role: 'creator' })
 
         const banner = boxen(
           chalk.bold.green('Workspace created!') + '\n\n' +
-          chalk.dim('Room: ') + chalk.white(room) + '\n' +
+          chalk.dim('Workspace: ') + chalk.white(workspace) + '\n' +
           chalk.dim('Role: ') + chalk.yellow('creator') + '\n\n' +
           chalk.dim('Topic Key (share with team):') + '\n' +
           chalk.cyan(topicKey),
