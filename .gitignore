@@ -1,0 +1,12 @@
+node_modules
+.data
+*.env
+.env.*
+dist/
+build/
+*.jar
+*.class
+.gradle/
+.idea/
+*.iml
+out/

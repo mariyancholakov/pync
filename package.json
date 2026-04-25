@@ -1,0 +1,6 @@
+{
+  "name": "pync",
+  "version": "1.0.0",
+  "description": "P2P encrypted environment variable sync built on the Pear/Holepunch protocol",
+  "main": "core/index.js"
+}
