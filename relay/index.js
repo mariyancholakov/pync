@@ -5,6 +5,7 @@ const Corestore = require('corestore')
 const Autobase = require('autobase')
 const Hyperbee = require('hyperbee')
 const Hyperswarm = require('hyperswarm')
+const Protomux = require('protomux')
 const b4a = require('b4a')
 
 const PORT = process.env.RELAY_PORT || 3001
@@ -51,6 +52,7 @@ async function joinWorkspace (topicKey) {
   swarm.join(base.discoveryKey)
   swarm.on('connection', (conn) => {
     store.replicate(conn)
+    exchangeWriterKeys(conn, base)
   })
 
   base.on('update', () => {
@@ -64,6 +66,27 @@ async function joinWorkspace (topicKey) {
 
   workspaces.set(topicKey, { store, base, swarm, updateInterval })
   process.stderr.write('joined workspace ' + topicKey.slice(0, 16) + '...\n')
+}
+
+function exchangeWriterKeys (conn, base) {
+  const mux = Protomux.from(conn)
+  const channel = mux.createChannel({ protocol: 'pync/writer-exchange' })
+  const msg = channel.addMessage({
+    encoding: {
+      preencode (state, m) { state.end += m.length },
+      encode (state, m) { state.buffer.set(m, state.start); state.start += m.length },
+      decode (state) { return state.buffer.subarray(state.start, state.end) }
+    },
+    async onmessage (remoteKey) {
+      if (base.writable) {
+        const keyHex = b4a.toString(remoteKey, 'hex')
+        await base.append(JSON.stringify({ type: 'addWriter', key: keyHex })).catch(() => {})
+        process.stderr.write('added writer ' + keyHex.slice(0, 16) + '...\n')
+      }
+    }
+  })
+  channel.open()
+  msg.send(base.local.key)
 }
 
 async function leaveWorkspace (topicKey) {

@@ -1,9 +1,38 @@
 const PyncCore = require('../core/index.js')
+const http = require('http')
+const https = require('https')
 
 const readline = require('readline')
 const state = require('./state.js')
 
+const RELAY_URL = process.env.RELAY_URL || 'https://pync.nyc'
+const RELAY_SECRET = process.env.RELAY_SECRET || ''
+
 const core = new PyncCore()
+
+function registerWithRelay (topicKey) {
+  if (!RELAY_SECRET) return
+  const url = new URL('/relay', RELAY_URL)
+  const body = JSON.stringify({ topicKey })
+  const mod = url.protocol === 'https:' ? https : http
+  const req = mod.request(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + RELAY_SECRET,
+      'Content-Length': Buffer.byteLength(body)
+    }
+  }, (res) => {
+    let data = ''
+    res.on('data', (c) => { data += c })
+    res.on('end', () => {
+      debug('relay register: ' + res.statusCode + ' ' + data)
+    })
+  })
+  req.on('error', (e) => debug('relay register failed: ' + e.message))
+  req.write(body)
+  req.end()
+}
 
 function emit(obj) {
   process.stdout.write(JSON.stringify(obj) + '\n')
@@ -24,6 +53,7 @@ async function handleCommand(cmd) {
         const result = await core.createWorkspace(cmd.workspace, cmd.passphrase)
         state.setReady('manager', result.topicKey)
         emit({ type: 'ready', topicKey: result.topicKey, role: 'manager' })
+        registerWithRelay(result.topicKey)
         break
       }
 
@@ -35,6 +65,7 @@ async function handleCommand(cmd) {
         await core.joinWorkspace(cmd.topicKey, cmd.passphrase)
         state.setReady('member', cmd.topicKey)
         emit({ type: 'ready', topicKey: cmd.topicKey, role: 'member' })
+        registerWithRelay(cmd.topicKey)
         const secrets = await core.listSecrets()
         state.setSecrets(secrets)
         emit({ type: 'list', secrets })
