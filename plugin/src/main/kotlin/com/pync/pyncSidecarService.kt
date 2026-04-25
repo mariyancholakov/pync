@@ -20,8 +20,9 @@ class PyncSidecarService : Disposable {
     private var process: Process? = null
     private var writer: BufferedWriter? = null
     private val listeners = CopyOnWriteArrayList<(JsonObject) -> Unit>()
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val ready = CompletableDeferred<Unit>()
+    private var supervisorJob = SupervisorJob()
+    private var scope = CoroutineScope(Dispatchers.IO + supervisorJob)
+    private var ready = CompletableDeferred<Unit>()
 
     private fun resolveSidecarPath(projectPath: String?): String {
         if (projectPath != null) {
@@ -112,10 +113,13 @@ class PyncSidecarService : Disposable {
 
     fun destroy() {
         try {
-            scope.cancel()
+            supervisorJob.cancel()
             process?.destroyForcibly()
             process = null
             writer = null
+            supervisorJob = SupervisorJob()
+            scope = CoroutineScope(Dispatchers.IO + supervisorJob)
+            ready = CompletableDeferred()
         } catch (_: Exception) {
         }
     }
