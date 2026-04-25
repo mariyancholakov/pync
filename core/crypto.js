@@ -1,12 +1,6 @@
 const sodium = require('sodium-native')
 const b4a = require('b4a')
 
-function topicKeyFromRoom (roomName) {
-  const out = b4a.alloc(32)
-  sodium.crypto_generichash(out, b4a.from(roomName))
-  return b4a.toString(out, 'hex')
-}
-
 function deriveKey (passphrase, roomName) {
   const salt = b4a.alloc(32)
   sodium.crypto_generichash(salt, b4a.from(roomName))
@@ -51,4 +45,4 @@ function decrypt (encryptedJson, key) {
   return b4a.toString(plaintext)
 }
 
-module.exports = { deriveKey, encrypt, decrypt, topicKeyFromRoom }
+module.exports = { deriveKey, encrypt, decrypt }
