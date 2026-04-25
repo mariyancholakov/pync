@@ -102,10 +102,8 @@ class PyncToolWindowFactory : ToolWindowFactory {
 
         val actionsRenderer = TableCellRenderer { _, _, _, _, _, _ ->
             val p = JPanel(FlowLayout(FlowLayout.CENTER, 2, 0))
-            if (role == "manager") {
-                p.add(JButton("Edit"))
-                p.add(JButton("Delete"))
-            }
+            p.add(JButton("Edit"))
+            p.add(JButton("Delete"))
             p
         }
         table.columnModel.getColumn(2).cellRenderer = actionsRenderer
@@ -152,8 +150,8 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 table: JTable, value: Any?, isSelected: Boolean, row: Int, column: Int
             ): Component {
                 currentRow = row
-                editBtn.isVisible = role == "manager"
-                deleteBtn.isVisible = role == "manager"
+                editBtn.isVisible = true
+                deleteBtn.isVisible = true
                 return panel
             }
 
@@ -164,7 +162,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         val bottomPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4))
         val addSecretBtn = JButton("Add Secret")
         val exportBtn = JButton("Export .env")
-        addSecretBtn.isVisible = false
+        addSecretBtn.isVisible = true
         bottomPanel.add(addSecretBtn)
         bottomPanel.add(exportBtn)
 
@@ -204,7 +202,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 }
                 val cmd = buildJsonObject {
                     put("cmd", "create")
-                    put("room", room)
+                    put("workspace", room)
                     put("passphrase", passphrase)
                 }
                 sidecarService.sendCommand(cmd.toString())
@@ -264,7 +262,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                         syncStatusLabel.text = "● Syncing..."
                         syncStatusLabel.foreground = Color(0xED, 0x6C, 0x02)
                         topicDisplay.text = "Topic: ${topicKey.take(16)}..."
-                        addSecretBtn.isVisible = role == "manager"
+                        addSecretBtn.isVisible = true
                         showSecretsPanel()
                     }
                 }
