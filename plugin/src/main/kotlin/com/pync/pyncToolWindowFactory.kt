@@ -31,11 +31,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         var role = ""
         var topicKey = ""
         val secrets = mutableListOf<Pair<String, String>>()
-<<<<<<< Updated upstream
-        val revealedRows = mutableSetOf<Int>()
         val envWriter = WriteToEnvAction()
-=======
->>>>>>> Stashed changes
 
         val rootPanel = JPanel(CardLayout())
 
@@ -295,6 +291,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         actionGroup.add(object : AnAction("Leave Workspace", "Disconnect and clear local data", AllIcons.Actions.Exit) {
             override fun actionPerformed(e: AnActionEvent) {
                 sidecarService.destroy()
+                envWriter.resetRemembered()
                 val dataDir = java.io.File(project.basePath ?: ".", "data")
                 if (dataDir.exists()) dataDir.deleteRecursively()
                 secrets.clear()
@@ -370,63 +367,9 @@ class PyncToolWindowFactory : ToolWindowFactory {
             }
         }
 
-<<<<<<< Updated upstream
-        copyBtn.addActionListener {
-            val sel = StringSelection(topicKey)
-            Toolkit.getDefaultToolkit().systemClipboard.setContents(sel, null)
-        }
-
-        table.selectionModel.addListSelectionListener {
-            deleteSecretBtn.isEnabled = table.selectedRow >= 0
-        }
-
-        deleteSecretBtn.addActionListener {
-            val row = table.selectedRow
-            if (row >= 0 && row < secrets.size) {
-                val key = secrets[row].first
-                val cmd = buildJsonObject {
-                    put("cmd", "delete")
-                    put("key", key)
-                }
-                sidecarService.sendCommand(cmd.toString())
-            }
-        }
-
-        addSecretBtn.addActionListener {
-            val dialog = AddSecretDialog(project)
-            if (dialog.showAndGet()) {
-                val (key, value) = dialog.getResult() ?: return@addActionListener
-                val cmd = buildJsonObject {
-                    put("cmd", "set")
-                    put("key", key)
-                    put("value", value)
-                }
-                sidecarService.sendCommand(cmd.toString())
-            }
-        }
-
-        leaveBtn.addActionListener {
-            sidecarService.destroy()
-            envWriter.resetRemembered()
-            val dataDir = java.io.File(project.basePath ?: ".", "data")
-            if (dataDir.exists()) dataDir.deleteRecursively()
-            secrets.clear()
-            tableModel.setRowCount(0)
-            role = ""
-            topicKey = ""
-            SwingUtilities.invokeLater {
-                statusLabel.text = "● Disconnected"
-                statusLabel.foreground = Color.RED
-                (rootPanel.layout as CardLayout).show(rootPanel, "connect")
-            }
-        }
-
-        // ========== SIDECAR LISTENER ==========
-=======
         // =====================================================================
         // SIDECAR LISTENER
         // =====================================================================
->>>>>>> Stashed changes
         sidecarService.addListener { json ->
             val type = json["type"]?.jsonPrimitive?.content ?: return@addListener
 
@@ -453,17 +396,11 @@ class PyncToolWindowFactory : ToolWindowFactory {
                         k to v
                     }
                     SwingUtilities.invokeLater {
-<<<<<<< Updated upstream
-                        syncStatusLabel.text = "● Synced"
-                        syncStatusLabel.foreground = Color(0x2E, 0x7D, 0x32)
-                        refreshTable(parsed)
-                        envWriter.autoSync(project, parsed)
-=======
                         syncDot.icon = AllIcons.General.InspectionsOK
                         syncDot.text = "Synced"
                         syncDot.foreground = Color(0x4C, 0xAF, 0x50)
                         refreshList(parsed)
->>>>>>> Stashed changes
+                        envWriter.autoSync(project, parsed)
                     }
                 }
 

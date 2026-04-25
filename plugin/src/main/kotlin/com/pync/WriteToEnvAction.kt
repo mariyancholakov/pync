@@ -5,10 +5,8 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.WindowManager
 import java.io.File
 import javax.swing.SwingUtilities
 
@@ -95,30 +93,15 @@ class WriteToEnvAction {
             rel.ifEmpty { file.name }
         }
 
-        val popup = JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(labels)
-            .setTitle("Write secrets to which .env file?")
-            .setItemChosenCallback { chosen ->
-                pendingChooser = false
-                val idx = labels.indexOf(chosen)
-                if (idx >= 0) {
-                    val file = envFiles[idx]
-                    rememberedPath = file.path
-                    writeToFile(project, file, secrets)
-                }
+        val dialog = EnvFileChooserDialog(project, labels)
+        if (dialog.showAndGet()) {
+            val idx = dialog.getSelectedIndex()
+            if (idx >= 0) {
+                val file = envFiles[idx]
+                writeToFile(project, file, secrets)
             }
-            .setCancelCallback {
-                pendingChooser = false
-                true
-            }
-            .createPopup()
-
-        val frame = WindowManager.getInstance().getFrame(project)
-        if (frame != null) {
-            popup.showInCenterOf(frame)
-        } else {
-            popup.showInFocusCenter()
         }
+        pendingChooser = false
     }
 
     private fun createAndWrite(project: Project, secrets: List<Pair<String, String>>) {
