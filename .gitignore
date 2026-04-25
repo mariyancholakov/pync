@@ -1,5 +1,7 @@
-node_modules
-.data
+node_modules/
+data/
+data-selftest-*/
+.claude/
 *.env
 .env.*
 dist/
@@ -10,4 +12,3 @@ build/
 .idea/
 *.iml
 out/
-CLAUDE.md

@@ -1,52 +1,4 @@
-let USE_MOCK = true
-try {
-  require('../core/index.js')
-  USE_MOCK = false
-} catch (e) {
-  USE_MOCK = true
-}
-
-// ============================================================
-// MOCK - replace when core is ready
-// ============================================================
-class PyncCoreMock {
-  constructor() {
-    this._secrets = new Map()
-    this._onChangeCb = null
-  }
-
-  async createWorkspace(room, passphrase) {
-    return { topicKey: 'mock_' + Buffer.from(room).toString('hex') }
-  }
-
-  async joinWorkspace(topicKey, passphrase) {}
-
-  async setSecret(key, value) {
-    this._secrets.set(key, value)
-    if (this._onChangeCb) {
-      this._onChangeCb(await this.listSecrets())
-    }
-  }
-
-  async deleteSecret(key) {
-    this._secrets.delete(key)
-    if (this._onChangeCb) {
-      this._onChangeCb(await this.listSecrets())
-    }
-  }
-
-  async listSecrets() {
-    return Array.from(this._secrets.entries()).map(
-      ([key, value]) => ({ key, value })
-    )
-  }
-
-  onChange(cb) { this._onChangeCb = cb }
-  getPeerCount() { return 2 }
-  async destroy() {}
-}
-
-const PyncCore = USE_MOCK ? PyncCoreMock : require('../core/index.js')
+const PyncCore = require('../core/index.js')
 
 const readline = require('readline')
 const state = require('./state.js')
@@ -90,7 +42,7 @@ async function handleCommand(cmd) {
       }
 
       case 'set': {
-        if (!cmd.key || !cmd.value) {
+        if (!cmd.key || cmd.value == null) {
           emit({ type: 'error', message: 'Missing key or value' })
           return
         }
@@ -122,7 +74,8 @@ async function handleCommand(cmd) {
   }
 }
 
-core.onChange(async (secrets) => {
+core.onChange(async () => {
+  const secrets = await core.listSecrets()
   state.setSecrets(secrets)
   emit({ type: 'update', secrets })
 })
@@ -134,20 +87,25 @@ const peerInterval = setInterval(() => {
 }, 30000)
 peerInterval.unref()
 
+let queue = Promise.resolve()
+
 const rl = readline.createInterface({ input: process.stdin })
-rl.on('line', async (line) => {
-  let cmd
-  try {
-    cmd = JSON.parse(line)
-  } catch (e) {
-    emit({ type: 'error', message: 'Invalid JSON: ' + e.message })
-    return
-  }
-  await handleCommand(cmd)
+rl.on('line', (line) => {
+  queue = queue.then(async () => {
+    let cmd
+    try {
+      cmd = JSON.parse(line)
+    } catch (e) {
+      emit({ type: 'error', message: 'Invalid JSON: ' + e.message })
+      return
+    }
+    await handleCommand(cmd)
+  })
 })
 rl.on('close', shutdown)
 
 async function shutdown() {
+  await queue
   debug('shutting down')
   await core.destroy()
   process.exit(0)
@@ -156,4 +114,4 @@ async function shutdown() {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-debug(USE_MOCK ? 'running with MOCK core' : 'running with REAL core')
+debug('sidecar started')

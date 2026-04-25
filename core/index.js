@@ -13,7 +13,8 @@ class PyncCore {
     this.encryptionKey = null
     this.role = null
     this._onChange = null
-    this._dataDir = opts.dataDir || './data/'
+    this._dataDir = opts.dataDir || process.env.PYNC_DATA_DIR || './data/'
+    this._bootstrap = opts.bootstrap || (process.env.PYNC_BOOTSTRAP ? JSON.parse(process.env.PYNC_BOOTSTRAP) : undefined)
   }
 
   _makeHandlers () {
@@ -69,7 +70,8 @@ class PyncCore {
   }
 
   _setupSwarm () {
-    this.swarm = new Hyperswarm()
+    const swarmOpts = this._bootstrap ? { bootstrap: this._bootstrap } : {}
+    this.swarm = new Hyperswarm(swarmOpts)
     this.swarm.join(this.base.discoveryKey)
     this.swarm.on('connection', (conn) => {
       this.store.replicate(conn)

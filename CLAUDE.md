@@ -17,23 +17,25 @@ The product has 4 components:
 3. plugin/ — IntelliJ IDEA plugin in Kotlin, spawns sidecar, shows secrets UI
 4. cli/ — commander.js CLI wrapping PyncCore directly
 
-I am P1. My job is to build:
-- core/crypto.js — encryption utilities (sodium-native, AES-256-GCM)
-- core/export.js — writes secrets to .env file
-- core/index.js — PyncCore class
-- cli/index.js + cli/bin.js — full CLI tool
-- test/integration.js — spawns two sidecars, tests end to end sync
-- AddSecretDialog.kt — Kotlin dialog for adding a secret (key + value fields)
-- EditSecretDialog.kt — Kotlin dialog for editing a secret (value field, key readonly)
-- ExportAction.kt — Kotlin class that writes secrets to .env and shows notification
+Before starting, identify which team member you are:
+- P1: core engine, crypto, CLI, integration tests, Kotlin dialogs
+- P2: sidecar (stdin/stdout JSON bridge + state manager)
+- P3: IntelliJ plugin UI and sidecar process manager
+- P4: README, Devpost, demo script, demo video
 
-The full detailed task prompt for P1 is already written in CLAUDE.md.
+Your files based on role:
+- P1: core/crypto.js, core/export.js, core/index.js, cli/index.js, cli/bin.js,
+  test/integration.js, AddSecretDialog.kt, EditSecretDialog.kt, ExportAction.kt
+- P2: sidecar/index.js, sidecar/state.js
+- P3: PyncToolWindowFactory.kt, PyncSidecarService.kt, build.gradle.kts,
+  settings.gradle.kts, plugin.xml
+- P4: README.md, Devpost, demo script, demo video
+
+Only touch your own files. Ask in group chat before touching another person's files.
+
 The JSON protocol is in PROTOCOL.md.
 The project is in the pync/ folder.
 The repo is on GitHub, P1 merges all PRs into main.
-
-Current status: just starting, nothing is built yet.
-All files exist as empty placeholders from the initial commit.
 
 Dependencies to install first:
 npm install hyperswarm autobase hyperbee corestore b4a sodium-native commander chalk boxen
@@ -202,8 +204,7 @@ Coordination rules:
 - Nobody touches another person's files without asking
 
 Rules for Claude Code:
-- Never touch sidecar/state.js or sidecar/index.js — that is P2
-- Never touch PyncSidecarService.kt or PyncToolWindowFactory.kt — that is P3
+- Never touch files owned by another team member (see ownership above)
 - Never change the JSON protocol
 - Always use exact class name PyncCore
 - Always use exact method names
@@ -222,6 +223,5 @@ Demo plan (P4 executes):
    reconnect laptop — value syncs automatically from offline cache
 7. Say: No cloud. No server. Direct device to device. Encrypted. Built on Pear.
 
-Next action right now:
+Dependencies:
 npm install hyperswarm autobase hyperbee corestore b4a sodium-native commander chalk boxen
-Then open Claude Code and paste the P1 task prompt starting with "Read CLAUDE.md first"
