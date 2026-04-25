@@ -44,8 +44,13 @@ class PyncSidecarService : Disposable {
         scope.launch {
             try {
                 val sidecarPath = resolveSidecarPath(projectPath)
-                val nodePath = listOf("/usr/local/bin/node", "/opt/homebrew/bin/node", "node")
-                    .first { Path.of(it).toFile().exists() || it == "node" }
+                val nodePath = listOf(
+                    "/usr/local/bin/node",
+                    "/opt/homebrew/bin/node",
+                    "C:\\Program Files\\nodejs\\node.exe",
+                    System.getenv("NVM_SYMLINK")?.let { "$it\\node.exe" } ?: "",
+                    "node"
+                ).first { it.isNotEmpty() && (Path.of(it).toFile().exists() || it == "node") }
                 val pb = ProcessBuilder(nodePath, sidecarPath)
                     .redirectErrorStream(false)
                 pb.environment()["PATH"] = System.getenv("PATH") ?: "/usr/local/bin:/usr/bin:/bin"
