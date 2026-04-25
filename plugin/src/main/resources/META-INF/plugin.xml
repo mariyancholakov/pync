@@ -10,5 +10,6 @@
             id="Pync"
             anchor="right"
             factoryClass="com.pync.PyncToolWindowFactory"/>
+        <notificationGroup id="Pync" displayType="BALLOON"/>
     </extensions>
 </idea-plugin>
