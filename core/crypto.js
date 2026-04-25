@@ -1,9 +1,9 @@
 const sodium = require('sodium-native')
 const b4a = require('b4a')
 
-function deriveKey (passphrase, roomName) {
+function deriveKey (passphrase, workspaceName) {
   const salt = b4a.alloc(32)
-  sodium.crypto_generichash(salt, b4a.from(roomName))
+  sodium.crypto_generichash(salt, b4a.from(workspaceName))
 
   const prk = b4a.alloc(32)
   sodium.crypto_generichash(prk, b4a.from(passphrase), salt)

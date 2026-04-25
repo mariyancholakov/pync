@@ -10,7 +10,7 @@ import javax.swing.JComponent
 
 class CreateWorkspaceDialog(project: Project?) : DialogWrapper(project) {
 
-    private val roomField = JBTextField()
+    private val workspaceField = JBTextField()
     private val passphraseField = JBTextField()
     private var result: Pair<String, String>? = null
 
@@ -21,19 +21,19 @@ class CreateWorkspaceDialog(project: Project?) : DialogWrapper(project) {
 
     override fun createCenterPanel(): JComponent {
         return panel {
-            row("Room name:") { cell(roomField).focused().columns(30) }
+            row("Workspace name:") { cell(workspaceField).focused().columns(30) }
             row("Passphrase:") { cell(passphraseField).columns(30) }
         }
     }
 
     override fun doValidate(): ValidationInfo? {
-        if (roomField.text.isBlank()) return ValidationInfo("Room name required", roomField)
+        if (workspaceField.text.isBlank()) return ValidationInfo("Workspace name required", workspaceField)
         if (passphraseField.text.isBlank()) return ValidationInfo("Passphrase required", passphraseField)
         return null
     }
 
     override fun doOKAction() {
-        result = Pair(roomField.text.trim(), passphraseField.text)
+        result = Pair(workspaceField.text.trim(), passphraseField.text)
         super.doOKAction()
     }
 

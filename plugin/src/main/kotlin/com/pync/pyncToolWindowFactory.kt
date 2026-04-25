@@ -194,7 +194,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         createBtn.addActionListener {
             val dialog = CreateWorkspaceDialog(project)
             if (dialog.showAndGet()) {
-                val (room, passphrase) = dialog.getResult() ?: return@addActionListener
+                val (workspace, passphrase) = dialog.getResult() ?: return@addActionListener
                 sidecarService.start()
                 SwingUtilities.invokeLater {
                     statusLabel.text = "● Syncing..."
@@ -202,7 +202,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 }
                 val cmd = buildJsonObject {
                     put("cmd", "create")
-                    put("workspace", room)
+                    put("workspace", workspace)
                     put("passphrase", passphrase)
                 }
                 sidecarService.sendCommand(cmd.toString())
