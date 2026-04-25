@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version'\\), d.get\\('buildNumber'\\)\\)\")",
+      "Bash(JAVA_HOME=\"C:/Users/User/.jdks/temurin-21\" ./gradlew build)"
+    ]
+  }
+}
