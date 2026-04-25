@@ -24,6 +24,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         var topicKey = ""
         val secrets = mutableListOf<Pair<String, String>>()
         val revealedRows = mutableSetOf<Int>()
+        val envWriter = WriteToEnvAction()
 
         val rootPanel = JPanel(CardLayout())
 
@@ -273,6 +274,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
 
         leaveBtn.addActionListener {
             sidecarService.destroy()
+            envWriter.resetRemembered()
             val dataDir = java.io.File(project.basePath ?: ".", "data")
             if (dataDir.exists()) dataDir.deleteRecursively()
             secrets.clear()
@@ -315,6 +317,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                         syncStatusLabel.text = "● Synced"
                         syncStatusLabel.foreground = Color(0x2E, 0x7D, 0x32)
                         refreshTable(parsed)
+                        envWriter.autoSync(project, parsed)
                     }
                 }
 
