@@ -3,6 +3,7 @@ package com.pync
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
 
