@@ -20,11 +20,10 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2025.1")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    sourceCompatibility = "21"
-    targetCompatibility = "21"
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
@@ -52,4 +51,7 @@ intellijPlatform {
         }
     }
     buildSearchableOptions = false
+}
+kotlin {
+    jvmToolchain(8)
 }
