@@ -2,6 +2,7 @@ const Corestore = require('corestore')
 const Autobase = require('autobase')
 const Hyperbee = require('hyperbee')
 const Hyperswarm = require('hyperswarm')
+const Protomux = require('protomux')
 const b4a = require('b4a')
 const crypto = require('./crypto')
 
@@ -40,7 +41,7 @@ class PyncCore {
   }
 
   async createWorkspace (room, passphrase) {
-    this.role = 'manager'
+    this.role = 'creator'
     this.store = new Corestore(this._dataDir)
 
     this.base = new Autobase(this.store, null, this._makeHandlers())
@@ -69,13 +70,42 @@ class PyncCore {
     this._setupUpdateListener()
   }
 
+  getWriterKey () {
+    return b4a.toString(this.base.local.key, 'hex')
+  }
+
+  async addWriter (writerKey) {
+    await this.base.append(JSON.stringify({ type: 'addWriter', key: writerKey }))
+  }
+
   _setupSwarm () {
     const swarmOpts = this._bootstrap ? { bootstrap: this._bootstrap } : {}
     this.swarm = new Hyperswarm(swarmOpts)
     this.swarm.join(this.base.discoveryKey)
     this.swarm.on('connection', (conn) => {
       this.store.replicate(conn)
+      this._exchangeWriterKeys(conn)
     })
+  }
+
+  _exchangeWriterKeys (conn) {
+    const mux = Protomux.from(conn)
+    const channel = mux.createChannel({ protocol: 'pync/writer-exchange' })
+    const self = this
+    const msg = channel.addMessage({
+      encoding: {
+        preencode (state, m) { state.end += m.length },
+        encode (state, m) { state.buffer.set(m, state.start); state.start += m.length },
+        decode (state) { return state.buffer.subarray(state.start, state.end) }
+      },
+      async onmessage (remoteKey) {
+        if (self.base.writable) {
+          self.addWriter(b4a.toString(remoteKey, 'hex')).catch(() => {})
+        }
+      }
+    })
+    channel.open()
+    msg.send(self.base.local.key)
   }
 
   _setupUpdateListener () {
@@ -85,14 +115,14 @@ class PyncCore {
   }
 
   async setSecret (key, value) {
-    if (this.role !== 'manager') throw new Error('Only manager can set secrets')
     const encrypted = crypto.encrypt(value, this.encryptionKey)
-    await this.base.append(JSON.stringify({ type: 'put', key, value: encrypted }))
+    const envelope = JSON.stringify({ v: encrypted, w: this.getWriterKey(), t: Date.now() })
+    await this.base.append(JSON.stringify({ type: 'put', key, value: envelope }))
   }
 
   async deleteSecret (key) {
-    if (this.role !== 'manager') throw new Error('Only manager can delete secrets')
-    await this.base.append(JSON.stringify({ type: 'put', key, value: null }))
+    const envelope = JSON.stringify({ v: null, w: this.getWriterKey(), t: Date.now() })
+    await this.base.append(JSON.stringify({ type: 'put', key, value: envelope }))
   }
 
   async listSecrets () {
@@ -101,8 +131,15 @@ class PyncCore {
     for await (const entry of this.base.view.createReadStream()) {
       if (!entry.value || entry.value === 'null') continue
       try {
-        const decrypted = crypto.decrypt(entry.value, this.encryptionKey)
-        secrets.push({ key: entry.key, value: decrypted })
+        const envelope = JSON.parse(entry.value)
+        if (!envelope.v || envelope.v === null) continue
+        const decrypted = crypto.decrypt(envelope.v, this.encryptionKey)
+        secrets.push({
+          key: entry.key,
+          value: decrypted,
+          writer: envelope.w || null,
+          timestamp: envelope.t || null
+        })
       } catch (e) {
         process.stderr.write('decrypt error for key ' + entry.key + ': ' + e.message + '\n')
       }
@@ -138,7 +175,7 @@ if (require.main === module) {
       const { topicKey } = await core.createWorkspace('testroom', 'testpass')
 
       if (!topicKey || topicKey.length !== 64) throw new Error('bad topicKey')
-      if (core.role !== 'manager') throw new Error('role should be manager')
+      if (core.role !== 'creator') throw new Error('role should be creator')
 
       await core.setSecret('DB_URL', 'postgres://localhost/mydb')
       await core.setSecret('API_KEY', 'sk-abc123')
@@ -148,6 +185,8 @@ if (require.main === module) {
 
       const db = secrets.find(s => s.key === 'DB_URL')
       if (!db || db.value !== 'postgres://localhost/mydb') throw new Error('DB_URL mismatch')
+      if (!db.writer || db.writer.length !== 64) throw new Error('missing writer key')
+      if (!db.timestamp || typeof db.timestamp !== 'number') throw new Error('missing timestamp')
 
       const api = secrets.find(s => s.key === 'API_KEY')
       if (!api || api.value !== 'sk-abc123') throw new Error('API_KEY mismatch')
@@ -157,17 +196,9 @@ if (require.main === module) {
       if (after.length !== 1) throw new Error('expected 1 secret after delete, got ' + after.length)
       if (after[0].key !== 'DB_URL') throw new Error('wrong key after delete')
 
-      let threw = false
-      const core2 = new PyncCore({ dataDir: testDir + '-member' })
-      await core2.joinWorkspace(topicKey, 'testpass')
-      try { await core2.setSecret('X', 'Y') } catch { threw = true }
-      if (!threw) throw new Error('member should not be able to set secrets')
-
-      await core2.destroy()
       await core.destroy()
 
       fs.rmSync(testDir, { recursive: true, force: true })
-      fs.rmSync(testDir + '-member', { recursive: true, force: true })
 
       console.log('PASS')
       process.exit(0)
@@ -176,7 +207,6 @@ if (require.main === module) {
       process.stderr.write(e.stack + '\n')
       try {
         fs.rmSync(testDir, { recursive: true, force: true })
-        fs.rmSync(testDir + '-member', { recursive: true, force: true })
       } catch (_) {}
       process.exit(1)
     }

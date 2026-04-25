@@ -164,27 +164,31 @@ function assert (condition, msg) {
     )
     process.stderr.write('PASS: B received initial list with ' + listB.secrets.length + ' secrets\n')
 
-    // test 7: member cannot set secrets
-    process.stderr.write('\n=== TEST 7: member cannot set secrets ===\n')
-    send(sidecarB, { cmd: 'set', key: 'HACK', value: 'nope' })
-    const errB = await waitForEvent(
+    // test 7: member can set secrets (equal permissions)
+    process.stderr.write('\n=== TEST 7: member can set secrets ===\n')
+    process.stderr.write('Waiting for member to become writable...\n')
+    await new Promise(r => setTimeout(r, 3000))
+    send(sidecarB, { cmd: 'set', key: 'MEMBER_SECRET', value: 'from_member' })
+    send(sidecarB, { cmd: 'list' })
+    const listAfterMemberSet = await waitForEvent(
       sidecarB,
-      (msg) => msg.type === 'error',
-      'B error on set'
+      (msg) => msg.type === 'list' && Array.isArray(msg.secrets) && msg.secrets.some(s => s.key === 'MEMBER_SECRET'),
+      'B list after member set'
     )
-    assert(errB.message.includes('manager'), 'error should mention manager, got: ' + errB.message)
-    process.stderr.write('PASS: member set rejected with: ' + errB.message + '\n')
+    const ms = listAfterMemberSet.secrets.find(s => s.key === 'MEMBER_SECRET')
+    assert(ms && ms.value === 'from_member', 'member set value mismatch')
+    process.stderr.write('PASS: member set MEMBER_SECRET=from_member\n')
 
-    // test 8: member cannot delete secrets
-    process.stderr.write('\n=== TEST 8: member cannot delete secrets ===\n')
-    send(sidecarB, { cmd: 'delete', key: 'DB_URL' })
-    const errDel = await waitForEvent(
+    // test 8: member can delete secrets (equal permissions)
+    process.stderr.write('\n=== TEST 8: member can delete secrets ===\n')
+    send(sidecarB, { cmd: 'delete', key: 'MEMBER_SECRET' })
+    send(sidecarB, { cmd: 'list' })
+    const listAfterMemberDel = await waitForEvent(
       sidecarB,
-      (msg) => msg.type === 'error',
-      'B error on delete'
+      (msg) => msg.type === 'list' && Array.isArray(msg.secrets) && !msg.secrets.some(s => s.key === 'MEMBER_SECRET'),
+      'B list after member delete'
     )
-    assert(errDel.message.includes('manager'), 'error should mention manager, got: ' + errDel.message)
-    process.stderr.write('PASS: member delete rejected with: ' + errDel.message + '\n')
+    process.stderr.write('PASS: member deleted MEMBER_SECRET\n')
 
     // test 9: member can list secrets
     process.stderr.write('\n=== TEST 9: member can list secrets ===\n')

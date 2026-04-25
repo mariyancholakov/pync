@@ -26,7 +26,7 @@ function loadConfig () {
 async function coreFromConfig () {
   const config = loadConfig()
   const core = new PyncCore()
-  if (config.role === 'manager') {
+  if (config.role === 'creator') {
     await core.createWorkspace(config.topicKey, config.passphrase)
   } else {
     await core.joinWorkspace(config.topicKey, config.passphrase)
@@ -71,12 +71,12 @@ if (process.argv.includes('run')) {
         const core = new PyncCore()
         const { topicKey } = await core.createWorkspace(room, passphrase)
 
-        saveConfig({ topicKey, passphrase, role: 'manager' })
+        saveConfig({ topicKey, passphrase, role: 'creator' })
 
         const banner = boxen(
           chalk.bold.green('Workspace created!') + '\n\n' +
           chalk.dim('Room: ') + chalk.white(room) + '\n' +
-          chalk.dim('Role: ') + chalk.yellow('manager') + '\n\n' +
+          chalk.dim('Role: ') + chalk.yellow('creator') + '\n\n' +
           chalk.dim('Topic Key (share with team):') + '\n' +
           chalk.cyan(topicKey),
           { padding: 1, borderColor: 'green', borderStyle: 'round' }
@@ -130,7 +130,7 @@ if (process.argv.includes('run')) {
 
   program
     .command('set <key> <value>')
-    .description('Set a secret (manager only)')
+    .description('Set a secret')
     .action(async (key, value) => {
       try {
         const core = await coreFromConfig()
@@ -146,7 +146,7 @@ if (process.argv.includes('run')) {
 
   program
     .command('delete <key>')
-    .description('Delete a secret (manager only)')
+    .description('Delete a secret')
     .action(async (key) => {
       try {
         const core = await coreFromConfig()
