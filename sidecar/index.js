@@ -6,7 +6,7 @@ const readline = require('readline')
 const state = require('./state.js')
 
 const RELAY_URL = process.env.RELAY_URL || 'https://pync.nyc'
-const RELAY_SECRET = process.env.RELAY_SECRET || ''
+const RELAY_SECRET = process.env.RELAY_SECRET || 'hackupc'
 
 const core = new PyncCore()
 
