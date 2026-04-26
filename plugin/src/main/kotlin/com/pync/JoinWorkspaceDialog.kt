@@ -5,14 +5,15 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
+import java.awt.Font
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
 class JoinWorkspaceDialog(project: Project?) : DialogWrapper(project) {
 
-    private val topicKeyField = JBTextField()
-    private val passphraseField = JBTextField()
+    private val topicKeyField = JBTextField().apply { font = font.deriveFont(20f) }
+    private val passphraseField = JBTextField().apply { font = font.deriveFont(20f) }
     private var result: Pair<String, String>? = null
 
     init {
@@ -41,8 +42,10 @@ class JoinWorkspaceDialog(project: Project?) : DialogWrapper(project) {
 
     override fun createCenterPanel(): JComponent {
         return panel {
-            row("Topic key:") { cell(topicKeyField).focused().columns(30) }
-            row("Passphrase:") { cell(passphraseField).columns(30) }
+            row("Topic key:") { cell(topicKeyField).focused().columns(40) }
+            row("Passphrase:") { cell(passphraseField).columns(40) }
+        }.apply {
+            font = font.deriveFont(20f)
         }
     }
 

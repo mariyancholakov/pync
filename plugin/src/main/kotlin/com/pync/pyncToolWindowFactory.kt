@@ -104,50 +104,50 @@ class PyncToolWindowFactory : ToolWindowFactory {
         brandPanel.isOpaque = false
 
         val titleLabel = JBLabel("PYNC")
-        titleLabel.font = titleLabel.font.deriveFont(Font.BOLD, 36f)
+        titleLabel.font = titleLabel.font.deriveFont(Font.BOLD, 54f)
         titleLabel.foreground = Color(0x00, 0xBC, 0xD4)
         titleLabel.alignmentX = Component.CENTER_ALIGNMENT
 
         val subtitleLabel = JBLabel("Peer-to-peer encrypted secrets")
         subtitleLabel.foreground = UIUtil.getLabelDisabledForeground()
-        subtitleLabel.font = subtitleLabel.font.deriveFont(14f)
+        subtitleLabel.font = subtitleLabel.font.deriveFont(21f)
         subtitleLabel.alignmentX = Component.CENTER_ALIGNMENT
 
         val taglineLabel = JBLabel("No cloud. No server. AES-256-GCM encrypted.")
         taglineLabel.foreground = UIUtil.getLabelDisabledForeground()
-        taglineLabel.font = taglineLabel.font.deriveFont(Font.ITALIC, 11f)
+        taglineLabel.font = taglineLabel.font.deriveFont(Font.ITALIC, 16f)
         taglineLabel.alignmentX = Component.CENTER_ALIGNMENT
 
         brandPanel.add(Box.createVerticalGlue())
         brandPanel.add(titleLabel)
-        brandPanel.add(Box.createVerticalStrut(6))
+        brandPanel.add(Box.createVerticalStrut(9))
         brandPanel.add(subtitleLabel)
-        brandPanel.add(Box.createVerticalStrut(3))
+        brandPanel.add(Box.createVerticalStrut(5))
         brandPanel.add(taglineLabel)
-        brandPanel.add(Box.createVerticalStrut(32))
+        brandPanel.add(Box.createVerticalStrut(48))
 
         val statusLabel = JBLabel("Not connected")
         statusLabel.icon = AllIcons.Nodes.EmptyNode
         statusLabel.foreground = UIUtil.getLabelDisabledForeground()
-        statusLabel.font = statusLabel.font.deriveFont(13f)
+        statusLabel.font = statusLabel.font.deriveFont(20f)
         statusLabel.alignmentX = Component.CENTER_ALIGNMENT
         brandPanel.add(statusLabel)
-        brandPanel.add(Box.createVerticalStrut(24))
+        brandPanel.add(Box.createVerticalStrut(36))
 
-        val buttonsPanel = JPanel(GridLayout(1, 2, 14, 0))
+        val buttonsPanel = JPanel(GridLayout(1, 2, 21, 0))
         buttonsPanel.isOpaque = false
-        buttonsPanel.maximumSize = Dimension(380, 44)
+        buttonsPanel.maximumSize = Dimension(570, 66)
 
         val createBtn = JButton("Create Workspace")
         createBtn.icon = AllIcons.General.Add
-        createBtn.font = createBtn.font.deriveFont(Font.BOLD, 13f)
+        createBtn.font = createBtn.font.deriveFont(Font.BOLD, 20f)
         createBtn.putClientProperty("JButton.buttonType", "default")
-        createBtn.preferredSize = Dimension(180, 44)
+        createBtn.preferredSize = Dimension(270, 66)
 
         val joinBtn = JButton("Join Workspace")
         joinBtn.icon = AllIcons.Vcs.Fetch
-        joinBtn.font = joinBtn.font.deriveFont(Font.BOLD, 13f)
-        joinBtn.preferredSize = Dimension(180, 44)
+        joinBtn.font = joinBtn.font.deriveFont(Font.BOLD, 20f)
+        joinBtn.preferredSize = Dimension(270, 66)
 
         buttonsPanel.add(createBtn)
         buttonsPanel.add(joinBtn)
@@ -165,20 +165,20 @@ class PyncToolWindowFactory : ToolWindowFactory {
         val secretsToolPanel = SimpleToolWindowPanel(true, true)
 
         // --- Header bar ---
-        val headerPanel = JPanel(BorderLayout(10, 0))
-        headerPanel.border = JBUI.Borders.empty(10, 14, 10, 14)
+        val headerPanel = JPanel(BorderLayout(15, 0))
+        headerPanel.border = JBUI.Borders.empty(15, 21, 15, 21)
 
         val syncDot = PulseLabel()
         syncDot.icon = AllIcons.Actions.Refresh
         syncDot.text = "Syncing..."
-        syncDot.font = syncDot.font.deriveFont(Font.BOLD, 13f)
+        syncDot.font = syncDot.font.deriveFont(Font.BOLD, 20f)
 
         val peerChip = JBLabel("0 peers")
         peerChip.icon = AllIcons.Actions.GroupBy
-        peerChip.font = peerChip.font.deriveFont(Font.BOLD, 14f)
+        peerChip.font = peerChip.font.deriveFont(Font.BOLD, 21f)
         peerChip.foreground = Color(0x00, 0xBC, 0xD4)
 
-        val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, 10, 0))
+        val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, 15, 0))
         leftHeader.isOpaque = false
         leftHeader.add(syncDot)
 
@@ -193,6 +193,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
         val secretList = JBList(listModel)
         secretList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         secretList.emptyText.text = "No secrets yet — click + to add one"
+        secretList.emptyText.component.font = secretList.font.deriveFont(18f)
 
         secretList.cellRenderer = ListCellRenderer<Pair<String, String>> { _, pair, index, isSelected, _ ->
             val (k, v) = pair
@@ -200,31 +201,31 @@ class PyncToolWindowFactory : ToolWindowFactory {
             val isHovered = index == hoveredIndex && !isSelected
 
             val card = JPanel(BorderLayout())
-            card.border = JBUI.Borders.empty(4, 10, 4, 10)
+            card.border = JBUI.Borders.empty(6, 15, 6, 15)
             card.isOpaque = false
 
-            val inner = object : JPanel(BorderLayout(14, 0)) {
+            val inner = object : JPanel(BorderLayout(21, 0)) {
                 override fun paintComponent(g: Graphics) {
                     val g2 = g.create() as Graphics2D
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                     g2.color = background
-                    g2.fillRoundRect(0, 0, width, height, 14, 14)
+                    g2.fillRoundRect(0, 0, width, height, 21, 21)
                     if (isSelected || isHovered) {
                         g2.color = Color(accentColor.red, accentColor.green, accentColor.blue, if (isSelected) 255 else 30)
-                        g2.fillRoundRect(0, 0, 5, height, 5, 5)
+                        g2.fillRoundRect(0, 0, 7, height, 7, 7)
                     } else {
                         g2.color = Color(accentColor.red, accentColor.green, accentColor.blue, 50)
-                        g2.fillRoundRect(0, 0, 4, height, 4, 4)
+                        g2.fillRoundRect(0, 0, 6, height, 6, 6)
                     }
                     if (isHovered && !isSelected) {
                         g2.color = Color(accentColor.red, accentColor.green, accentColor.blue, 12)
-                        g2.fillRoundRect(0, 0, width, height, 14, 14)
+                        g2.fillRoundRect(0, 0, width, height, 21, 21)
                     }
                     g2.dispose()
                 }
             }
             inner.isOpaque = false
-            inner.border = JBUI.Borders.empty(12, 16, 12, 16)
+            inner.border = JBUI.Borders.empty(18, 24, 18, 24)
             inner.background = if (isSelected) {
                 UIUtil.getListSelectionBackground(true)
             } else if (index % 2 == 0) {
@@ -238,15 +239,15 @@ class PyncToolWindowFactory : ToolWindowFactory {
             textPanel.isOpaque = false
 
             val keyLbl = JBLabel(k)
-            keyLbl.font = keyLbl.font.deriveFont(Font.BOLD, 14f)
+            keyLbl.font = keyLbl.font.deriveFont(Font.BOLD, 21f)
             keyLbl.foreground = if (isSelected) UIUtil.getListSelectionForeground(true) else UIUtil.getLabelForeground()
             textPanel.add(keyLbl)
-            textPanel.add(Box.createVerticalStrut(4))
+            textPanel.add(Box.createVerticalStrut(6))
 
             val dots = minOf(v.length, 20).coerceAtLeast(8)
             val displayValue = if (revealedKeys.contains(k)) v else "•".repeat(dots)
             val valLbl = JBLabel(displayValue)
-            valLbl.font = Font(Font.MONOSPACED, Font.PLAIN, 13)
+            valLbl.font = Font(Font.MONOSPACED, Font.PLAIN, 20)
             valLbl.foreground = if (isSelected) {
                 val fg = UIUtil.getListSelectionForeground(true)
                 Color(fg.red, fg.green, fg.blue, 180)
@@ -257,7 +258,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
 
             inner.add(textPanel, BorderLayout.CENTER)
 
-            val iconsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0))
+            val iconsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 9, 0))
             iconsPanel.isOpaque = false
 
             val copyLabel = JBLabel(AllIcons.Actions.Copy)
@@ -278,7 +279,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
             card
         }
 
-        secretList.fixedCellHeight = 72
+        secretList.fixedCellHeight = 108
 
         secretList.addMouseMotionListener(object : java.awt.event.MouseMotionAdapter() {
             override fun mouseMoved(e: MouseEvent) {
@@ -301,11 +302,11 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 val cellBounds = secretList.getCellBounds(idx, idx) ?: return
                 val relativeX = e.x - cellBounds.x
                 val fromRight = cellBounds.width - relativeX
-                if (fromRight in 0..30) {
+                if (fromRight in 0..45) {
                     val key = listModel.getElementAt(idx).first
                     if (revealedKeys.contains(key)) revealedKeys.remove(key) else revealedKeys.add(key)
                     secretList.repaint()
-                } else if (fromRight in 31..60) {
+                } else if (fromRight in 46..90) {
                     val pair = listModel.getElementAt(idx)
                     Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(pair.second), null)
                     Notifications.Bus.notify(
@@ -507,6 +508,7 @@ class PyncToolWindowFactory : ToolWindowFactory {
                     val count = json["count"]?.jsonPrimitive?.int ?: 0
                     SwingUtilities.invokeLater {
                         peerChip.text = "$count peer${if (count != 1) "s" else ""}"
+                        peerChip.font = peerChip.font.deriveFont(Font.BOLD, 21f)
                         peerChip.icon = if (count > 0) AllIcons.Actions.GroupBy else AllIcons.General.Warning
                     }
                 }

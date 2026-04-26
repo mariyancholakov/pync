@@ -5,14 +5,15 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
+import java.awt.Font
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
 class AddSecretDialog(project: Project) : DialogWrapper(project) {
 
-    private val keyField = JBTextField()
-    private val valueField = JBTextField()
+    private val keyField = JBTextField().apply { font = font.deriveFont(20f) }
+    private val valueField = JBTextField().apply { font = font.deriveFont(20f) }
     private var result: Pair<String, String>? = null
 
     init {
@@ -41,8 +42,10 @@ class AddSecretDialog(project: Project) : DialogWrapper(project) {
 
     override fun createCenterPanel(): JComponent {
         return panel {
-            row("Key:") { cell(keyField).focused().columns(30) }
-            row("Value:") { cell(valueField).columns(30) }
+            row("Key:") { cell(keyField).focused().columns(40) }
+            row("Value:") { cell(valueField).columns(40) }
+        }.apply {
+            font = font.deriveFont(20f)
         }
     }
 
