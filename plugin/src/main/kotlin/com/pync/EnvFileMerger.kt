@@ -4,7 +4,7 @@ object EnvFileMerger {
 
     fun merge(existing: String, incoming: Map<String, String>): String {
         val remaining = incoming.toMutableMap()
-        val lines = existing.lines()
+        val lines = if (existing.isBlank()) emptyList() else existing.lines()
         val result = mutableListOf<String>()
 
         for (line in lines) {
@@ -33,6 +33,9 @@ object EnvFileMerger {
             }
         }
 
+        while (result.isNotEmpty() && result.first().isBlank()) {
+            result.removeAt(0)
+        }
         val text = result.joinToString("\n")
         return if (text.endsWith("\n")) text else "$text\n"
     }
