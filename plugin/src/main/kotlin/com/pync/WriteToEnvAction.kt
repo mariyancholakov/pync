@@ -120,6 +120,7 @@ class WriteToEnvAction {
 
     private fun writeToFile(project: Project, file: VirtualFile, secrets: List<Pair<String, String>>) {
         WriteCommandAction.runWriteCommandAction(project) {
+            file.refresh(false, false)
             val existing = String(file.contentsToByteArray(), Charsets.UTF_8)
             val merged = EnvFileMerger.merge(existing, secrets.toLinkedMap())
             file.setBinaryContent(merged.toByteArray(Charsets.UTF_8))
@@ -149,27 +150,29 @@ class WriteToEnvAction {
 
     private fun warnNotIgnored(project: Project, fileName: String) {
         SwingUtilities.invokeLater {
-            NotificationGroupManager.getInstance()
+            val notification = NotificationGroupManager.getInstance()
                 .getNotificationGroup("Pync")
                 .createNotification(
                     "Pync",
                     "$fileName is not in .gitignore. Your secrets may be committed.",
                     NotificationType.WARNING
                 )
-                .notify(project)
+            notification.notify(project)
+            javax.swing.Timer(5000) { notification.expire() }.apply { isRepeats = false; start() }
         }
     }
 
     private fun notify(project: Project, count: Int, fileName: String) {
         SwingUtilities.invokeLater {
-            NotificationGroupManager.getInstance()
+            val notification = NotificationGroupManager.getInstance()
                 .getNotificationGroup("Pync")
                 .createNotification(
                     "Pync",
                     "Wrote $count secret${if (count != 1) "s" else ""} to $fileName",
                     NotificationType.INFORMATION
                 )
-                .notify(project)
+            notification.notify(project)
+            javax.swing.Timer(3000) { notification.expire() }.apply { isRepeats = false; start() }
         }
     }
 

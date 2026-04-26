@@ -54,26 +54,11 @@ class EnvFileChooserDialog(
             val icon = JBLabel(AllIcons.FileTypes.Properties)
             cell.add(icon, BorderLayout.WEST)
 
-            val textPanel = JPanel()
-            textPanel.layout = BoxLayout(textPanel, BoxLayout.Y_AXIS)
-            textPanel.isOpaque = false
-
-            val nameLabel = JBLabel(value.substringAfterLast("/").substringAfterLast("\\"))
-            nameLabel.font = nameLabel.font.deriveFont(Font.BOLD, 13f)
-            if (isSelected) nameLabel.foreground = UIUtil.getListSelectionForeground(true)
-            textPanel.add(nameLabel)
-
             val pathLabel = JBLabel(value)
-            pathLabel.font = Font(Font.MONOSPACED, Font.PLAIN, 11)
-            pathLabel.foreground = if (isSelected) {
-                val fg = UIUtil.getListSelectionForeground(true)
-                Color(fg.red, fg.green, fg.blue, 180)
-            } else {
-                UIUtil.getLabelDisabledForeground()
-            }
-            textPanel.add(pathLabel)
+            pathLabel.font = pathLabel.font.deriveFont(Font.BOLD, 13f)
+            if (isSelected) pathLabel.foreground = UIUtil.getListSelectionForeground(true)
 
-            cell.add(textPanel, BorderLayout.CENTER)
+            cell.add(pathLabel, BorderLayout.CENTER)
 
             val checkIcon = JBLabel(
                 if (isSelected) AllIcons.Actions.Checked else AllIcons.Actions.Checked_selected
