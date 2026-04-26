@@ -158,7 +158,7 @@ wss.on('connection', (socket) => {
   relay(dht, new DhtRelayWS(false, socket))
 })
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   process.stderr.write('relay server listening on port ' + PORT + ' (HTTP + WebSocket DHT relay)\n')
 })
 

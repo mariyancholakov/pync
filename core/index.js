@@ -18,6 +18,7 @@ class PyncCore {
     this.role = null
     this._onChange = null
     this._dht = null
+    this._destroyed = false
     this._dataDir = opts.dataDir || process.env.PYNC_DATA_DIR || './data/'
     this._bootstrap = opts.bootstrap || (process.env.PYNC_BOOTSTRAP ? JSON.parse(process.env.PYNC_BOOTSTRAP) : undefined)
     this._relayURL = opts.relayURL || process.env.RELAY_URL || null
@@ -87,20 +88,48 @@ class PyncCore {
     await this.base.append(JSON.stringify({ type: 'addWriter', key: writerKey }))
   }
 
+  async _connectRelay () {
+    if (!this._relayURL || this._bootstrap) return null
+    const wsURL = this._relayURL.replace('https://', 'wss://').replace('http://', 'ws://')
+    process.stderr.write('[pync] connecting to DHT relay at ' + wsURL + '\n')
+    const ws = new WebSocket(wsURL)
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve)
+      ws.on('error', reject)
+    })
+    ws.on('close', () => {
+      if (this._destroyed) return
+      process.stderr.write('[pync] relay WebSocket closed, reconnecting in 3s...\n')
+      setTimeout(() => this._reconnect(), 3000)
+    })
+    ws.on('error', () => {})
+    return ws
+  }
+
+  async _reconnect () {
+    if (this._destroyed) return
+    try {
+      if (this.swarm) { await this.swarm.destroy().catch(() => {}); this.swarm = null }
+      if (this._dht) { await this._dht.destroy().catch(() => {}); this._dht = null }
+      await this._setupSwarm()
+      process.stderr.write('[pync] reconnected to relay\n')
+      if (this._onChange) this._onChange()
+    } catch (e) {
+      process.stderr.write('[pync] reconnect failed: ' + e.message + ', retrying in 5s...\n')
+      setTimeout(() => this._reconnect(), 5000)
+    }
+  }
+
   async _setupSwarm () {
     const swarmOpts = this._bootstrap ? { bootstrap: this._bootstrap } : {}
 
     if (this._relayURL && !this._bootstrap) {
       try {
-        const wsURL = this._relayURL.replace('https://', 'wss://').replace('http://', 'ws://')
-        process.stderr.write('[pync] connecting to DHT relay at ' + wsURL + '\n')
-        const ws = new WebSocket(wsURL)
-        await new Promise((resolve, reject) => {
-          ws.on('open', resolve)
-          ws.on('error', reject)
-        })
-        this._dht = new RelayDHT(new DhtRelayWS(true, ws))
-        swarmOpts.dht = this._dht
+        const ws = await this._connectRelay()
+        if (ws) {
+          this._dht = new RelayDHT(new DhtRelayWS(true, ws))
+          swarmOpts.dht = this._dht
+        }
       } catch (e) {
         process.stderr.write('[pync] relay connection failed, using direct DHT: ' + e.message + '\n')
       }
@@ -152,7 +181,7 @@ class PyncCore {
   }
 
   async listSecrets () {
-    await this.base.update()
+    try { await this.base.update() } catch (_) {}
     const secrets = []
     for await (const entry of this.base.view.createReadStream()) {
       if (!entry.value || entry.value === 'null') continue
@@ -183,6 +212,7 @@ class PyncCore {
   }
 
   async destroy () {
+    this._destroyed = true
     if (this.swarm) await this.swarm.destroy()
     if (this._dht) await this._dht.destroy()
     if (this.base) await this.base.close()
