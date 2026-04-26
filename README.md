@@ -21,19 +21,17 @@ Teams share secrets over Slack DMs, cloud vaults, or `.env` files in shared driv
 pync encrypts secrets on your device (AES-256-GCM) and syncs them directly between teammates over the Pear/Holepunch P2P protocol. No server ever sees your plaintext.
 
 ```mermaid
-graph TD
-    Plugin["IntelliJ Plugin"] --> Sidecar["Sidecar"]
-    Sidecar --> Core["PyncCore + AES-256-GCM"]
-    Core --> Swarm["Hyperswarm P2P"]
-    Swarm --> Peers["Teammates"]
-    Swarm -.-> Relay["Relay — pync.nyc"]
+flowchart TD
+    A(IntelliJ Plugin)
+    B(Sidecar)
+    C(PyncCore + AES-256-GCM)
+    D(Hyperswarm P2P)
+    E(Teammates)
+    F(Relay — pync.nyc)
 
-    style Plugin fill:#FF6B35,stroke:#E65100,color:white
-    style Core fill:#00BCD4,stroke:#00838F,color:white
-    style Swarm fill:#00BCD4,stroke:#00838F,color:white
-    style Relay fill:#FF9800,stroke:#F57C00,color:white
-    style Peers fill:#4CAF50,stroke:#388E3C,color:white
-    style Sidecar fill:#607D8B,stroke:#455A64,color:white
+    A --> B --> C --> D
+    D --> E
+    D -.-> F
 ```
 
 ## Features
