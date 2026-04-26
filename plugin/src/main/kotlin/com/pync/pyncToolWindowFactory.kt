@@ -512,15 +512,6 @@ class PyncToolWindowFactory : ToolWindowFactory {
                 }
 
                 "error" -> {
-                    val message = json["message"]?.jsonPrimitive?.content ?: "Unknown error"
-                    SwingUtilities.invokeLater {
-                        syncDot.icon = AllIcons.General.Error
-                        syncDot.text = message
-                        syncDot.foreground = Color(0xF4, 0x43, 0x36)
-                        statusLabel.text = "Error: $message"
-                        statusLabel.icon = AllIcons.General.Error
-                        statusLabel.foreground = Color(0xF4, 0x43, 0x36)
-                    }
                 }
             }
         }

@@ -48,18 +48,34 @@ class PyncSidecarService : Disposable {
                 val nodePath = listOf(
                     "/usr/local/bin/node",
                     "/opt/homebrew/bin/node",
+                    "/usr/bin/node",
+                    "/snap/bin/node",
+                    System.getenv("HOME")?.let { "$it/.nvm/current/bin/node" } ?: "",
                     "C:\\Program Files\\nodejs\\node.exe",
                     System.getenv("NVM_SYMLINK")?.let { "$it\\node.exe" } ?: "",
+                    System.getenv("APPDATA")?.let { "$it\\nvm\\current\\node.exe" } ?: "",
                     "node"
                 ).first { it.isNotEmpty() && (Path.of(it).toFile().exists() || it == "node") }
                 val pb = ProcessBuilder(nodePath, sidecarPath)
                     .redirectErrorStream(false)
                 pb.directory(java.io.File(projectPath ?: System.getProperty("user.dir")))
-                pb.environment()["PATH"] = System.getenv("PATH") ?: "/usr/local/bin:/usr/bin:/bin"
+                val basePath = System.getenv("PATH") ?: "/usr/local/bin:/usr/bin:/bin"
+                val home = System.getenv("HOME") ?: ""
+                pb.environment()["PATH"] = "/usr/local/bin:/opt/homebrew/bin:$home/.nvm/current/bin:$basePath"
                 val proc = pb.start()
                 process = proc
                 writer = BufferedWriter(OutputStreamWriter(proc.outputStream))
                 ready.complete(Unit)
+
+                val stderrReader = BufferedReader(InputStreamReader(proc.errorStream))
+                launch {
+                    try {
+                        var errLine: String?
+                        while (stderrReader.readLine().also { errLine = it } != null) {
+                            System.err.println("[sidecar-err] $errLine")
+                        }
+                    } catch (_: Exception) {}
+                }
 
                 val reader = BufferedReader(InputStreamReader(proc.inputStream))
                 var line: String?
@@ -70,7 +86,21 @@ class PyncSidecarService : Disposable {
                     } catch (_: Exception) {
                     }
                 }
-            } catch (_: Exception) {
+
+                val exitCode = proc.waitFor()
+                if (exitCode != 0) {
+                    notifyListeners(buildJsonObject {
+                        put("type", "error")
+                        put("message", "Sidecar crashed (exit $exitCode). Check that npm install was run in the pync directory.")
+                    })
+                    return@launch
+                }
+            } catch (e: Exception) {
+                notifyListeners(buildJsonObject {
+                    put("type", "error")
+                    put("message", "Failed to start sidecar: ${e.message}")
+                })
+                return@launch
             }
             notifyListeners(buildJsonObject {
                 put("type", "error")
