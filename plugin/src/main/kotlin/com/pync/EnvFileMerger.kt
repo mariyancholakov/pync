@@ -3,10 +3,8 @@ package com.pync
 object EnvFileMerger {
 
     fun merge(existing: String, incoming: Map<String, String>): String {
-        if (incoming.isEmpty()) return existing
-
         val remaining = incoming.toMutableMap()
-        val lines = existing.lines().toMutableList()
+        val lines = existing.lines()
         val result = mutableListOf<String>()
 
         for (line in lines) {
@@ -23,8 +21,6 @@ object EnvFileMerger {
             val key = trimmed.substring(0, eqIndex).trim()
             if (key in remaining) {
                 result.add("$key=${remaining.remove(key)}")
-            } else {
-                result.add(line)
             }
         }
 

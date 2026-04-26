@@ -389,25 +389,23 @@ class PyncToolWindowFactory : ToolWindowFactory {
 
         actionGroup.addSeparator()
 
-        actionGroup.add(object : AnAction("Leave Workspace", "Disconnect and clear local data", AllIcons.Actions.Exit) {
+        actionGroup.add(object : AnAction("Disconnect", "Disconnect but keep local data", AllIcons.Actions.Suspend) {
             override fun actionPerformed(e: AnActionEvent) {
                 sidecarService.destroy()
-                envWriter.resetRemembered()
-                val dataDir = java.io.File(project.basePath ?: ".", "data")
-                if (dataDir.exists()) dataDir.deleteRecursively()
                 secrets.clear()
                 listModel.clear()
                 revealedKeys.clear()
                 role = ""
                 topicKey = ""
                 SwingUtilities.invokeLater {
-                    statusLabel.text = "Not connected"
+                    statusLabel.text = "Disconnected"
                     statusLabel.icon = AllIcons.Nodes.EmptyNode
                     statusLabel.foreground = UIUtil.getLabelDisabledForeground()
                     rootPanel.showCard("connect")
                 }
             }
         })
+
 
         val toolbar = ActionManager.getInstance().createActionToolbar("PyncToolbar", actionGroup, true)
         toolbar.targetComponent = secretsToolPanel

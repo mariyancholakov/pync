@@ -8,7 +8,7 @@ const state = require('./state.js')
 const RELAY_URL = process.env.RELAY_URL || 'https://pync.nyc'
 const RELAY_SECRET = process.env.RELAY_SECRET || 'hackupc'
 
-const core = new PyncCore()
+const core = new PyncCore({ relayURL: RELAY_URL })
 
 function registerWithRelay (topicKey) {
   if (!RELAY_SECRET) return

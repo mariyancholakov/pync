@@ -7,6 +7,10 @@ const Hyperbee = require('hyperbee')
 const Hyperswarm = require('hyperswarm')
 const Protomux = require('protomux')
 const b4a = require('b4a')
+const DHT = require('hyperdht')
+const { relay } = require('@hyperswarm/dht-relay')
+const DhtRelayWS = require('@hyperswarm/dht-relay/ws')
+const { WebSocketServer } = require('ws')
 
 const PORT = process.env.RELAY_PORT || 3001
 const SECRET = process.env.RELAY_SECRET
@@ -147,13 +151,22 @@ const server = http.createServer(async (req, res) => {
   send(res, 404, { error: 'not found' })
 })
 
+const dht = new DHT()
+const wss = new WebSocketServer({ server })
+wss.on('connection', (socket) => {
+  process.stderr.write('dht-relay: new WebSocket client\n')
+  relay(dht, new DhtRelayWS(false, socket))
+})
+
 server.listen(PORT, () => {
-  process.stderr.write('relay server listening on port ' + PORT + '\n')
+  process.stderr.write('relay server listening on port ' + PORT + ' (HTTP + WebSocket DHT relay)\n')
 })
 
 async function shutdown () {
   process.stderr.write('shutting down...\n')
   for (const [key] of workspaces) await leaveWorkspace(key)
+  wss.close()
+  await dht.destroy()
   server.close()
   process.exit(0)
 }

@@ -5,6 +5,9 @@ const Hyperswarm = require('hyperswarm')
 const Protomux = require('protomux')
 const b4a = require('b4a')
 const crypto = require('./crypto')
+const WebSocket = require('ws')
+const RelayDHT = require('@hyperswarm/dht-relay')
+const DhtRelayWS = require('@hyperswarm/dht-relay/ws')
 
 class PyncCore {
   constructor (opts = {}) {
@@ -14,8 +17,10 @@ class PyncCore {
     this.encryptionKey = null
     this.role = null
     this._onChange = null
+    this._dht = null
     this._dataDir = opts.dataDir || process.env.PYNC_DATA_DIR || './data/'
     this._bootstrap = opts.bootstrap || (process.env.PYNC_BOOTSTRAP ? JSON.parse(process.env.PYNC_BOOTSTRAP) : undefined)
+    this._relayURL = opts.relayURL || process.env.RELAY_URL || null
   }
 
   _makeHandlers () {
@@ -42,7 +47,9 @@ class PyncCore {
 
   async createWorkspace (workspace, passphrase) {
     this.role = 'creator'
-    this.store = new Corestore(this._dataDir)
+    const dir = require('path').join(this._dataDir, 'ws-' + Date.now().toString(36))
+    require('fs').mkdirSync(dir, { recursive: true })
+    this.store = new Corestore(dir)
 
     this.base = new Autobase(this.store, null, this._makeHandlers())
     await this.base.ready()
@@ -50,7 +57,7 @@ class PyncCore {
     const topicKey = b4a.toString(this.base.key, 'hex')
     this.encryptionKey = crypto.deriveKey(passphrase, topicKey)
 
-    this._setupSwarm()
+    await this._setupSwarm()
     this._setupUpdateListener()
 
     return { topicKey }
@@ -58,7 +65,9 @@ class PyncCore {
 
   async joinWorkspace (topicKey, passphrase) {
     this.role = 'member'
-    this.store = new Corestore(this._dataDir)
+    const dir = require('path').join(this._dataDir, topicKey.slice(0, 16))
+    require('fs').mkdirSync(dir, { recursive: true })
+    this.store = new Corestore(dir)
 
     const bootstrap = b4a.from(topicKey, 'hex')
     this.base = new Autobase(this.store, bootstrap, this._makeHandlers())
@@ -66,7 +75,7 @@ class PyncCore {
 
     this.encryptionKey = crypto.deriveKey(passphrase, topicKey)
 
-    this._setupSwarm()
+    await this._setupSwarm()
     this._setupUpdateListener()
   }
 
@@ -78,8 +87,25 @@ class PyncCore {
     await this.base.append(JSON.stringify({ type: 'addWriter', key: writerKey }))
   }
 
-  _setupSwarm () {
+  async _setupSwarm () {
     const swarmOpts = this._bootstrap ? { bootstrap: this._bootstrap } : {}
+
+    if (this._relayURL && !this._bootstrap) {
+      try {
+        const wsURL = this._relayURL.replace('https://', 'wss://').replace('http://', 'ws://')
+        process.stderr.write('[pync] connecting to DHT relay at ' + wsURL + '\n')
+        const ws = new WebSocket(wsURL)
+        await new Promise((resolve, reject) => {
+          ws.on('open', resolve)
+          ws.on('error', reject)
+        })
+        this._dht = new RelayDHT(new DhtRelayWS(true, ws))
+        swarmOpts.dht = this._dht
+      } catch (e) {
+        process.stderr.write('[pync] relay connection failed, using direct DHT: ' + e.message + '\n')
+      }
+    }
+
     this.swarm = new Hyperswarm(swarmOpts)
     this.swarm.join(this.base.discoveryKey)
     this.swarm.on('connection', (conn) => {
@@ -158,6 +184,7 @@ class PyncCore {
 
   async destroy () {
     if (this.swarm) await this.swarm.destroy()
+    if (this._dht) await this._dht.destroy()
     if (this.base) await this.base.close()
     if (this.store) await this.store.close()
   }

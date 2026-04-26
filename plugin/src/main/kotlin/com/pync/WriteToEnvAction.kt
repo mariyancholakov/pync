@@ -20,8 +20,6 @@ class WriteToEnvAction {
     private var pendingChooser = false
 
     fun autoSync(project: Project, secrets: List<Pair<String, String>>) {
-        if (secrets.isEmpty()) return
-
         ApplicationManager.getApplication().invokeLater {
             doAutoSync(project, secrets)
         }
@@ -38,6 +36,7 @@ class WriteToEnvAction {
             rememberedPath = null
         }
 
+        if (secrets.isEmpty()) return
         if (pendingChooser) return
 
         val envFiles = findEnvFiles(project)
